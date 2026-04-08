@@ -1,0 +1,29 @@
+<section class="contract-section">
+    <h2 class="contract-title">UGOVOR O PUTOVANJU BROJ: {{ contract.number }}</h2>
+
+    <p>
+        <span class="strong">ORGANIZATOR PUTOVANJA:</span>
+        {{ company.name }}, {{ company.address }}, ID broj: {{ company.id_number }},
+        PDV broj: {{ company.vat_number }}, kojeg zastupa {{ company.representative_name }}.
+    </p>
+
+    <h3 class="section-label">Putnik:</h3>
+    <p>Ime i prezime: <span class="strong">{{ traveler.full_name }}</span></p>
+    <p>Adresa: <span class="strong">{{ traveler.address }}</span></p>
+    <p>Broj telefona: <span class="strong">{{ traveler.phone }}</span></p>
+    <p>E-mail adresa: <span class="strong">{{ traveler.email }}</span></p>
+
+    <h3 class="section-label">Putnici koji putuju (imena i prezimena):</h3>
+    <div class="block">{{ travelers_list }}</div>
+
+    <p>
+        Predmet Ugovora između {{ company.name }} i ugovaratelja putovanja (putnika)
+        je paket aranžman čiji program putovanja je putnik primio prije potpisivanja ovog Ugovora
+        (u slučaju rezervacije elektronskim putem, smatra se da je putnik program pročitao na našoj FB/IG
+        stranici i da je saglasan sa istim). Ukupan iznos ugovorenog putovanja je
+        <span class="strong">{{ finance.total }} KM</span>, čije stavke su definisane u obračunu.
+    </p>
+
+    <h3 class="section-label">Obračun:</h3>
+    <div class="block">{{ items_table }}</div>
+</section>

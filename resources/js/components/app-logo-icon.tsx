@@ -3,7 +3,7 @@ import type { ImgHTMLAttributes } from 'react';
 export default function AppLogoIcon(props: ImgHTMLAttributes<HTMLImageElement>) {
     return (
         <img
-            src="/logo.png"
+            src="/riho-logo.png"
             alt="Logo"
             {...props}
         />

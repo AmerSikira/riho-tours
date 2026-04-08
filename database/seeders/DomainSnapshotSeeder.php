@@ -192,6 +192,7 @@ class DomainSnapshotSeeder extends Seeder
         for ($index = 0; $index < 30; $index++) {
             $firstName = $firstNames[$index % count($firstNames)];
             $lastName = $lastNames[$index % count($lastNames)];
+            $city = $cities[$index % count($cities)];
             $year = 1985 + ($index % 20);
             $month = ($index % 12) + 1;
             $day = ($index % 27) + 1;
@@ -202,7 +203,8 @@ class DomainSnapshotSeeder extends Seeder
                     'ime' => $firstName,
                     'prezime' => $lastName,
                     'datum_rodjenja' => sprintf('%04d-%02d-%02d', $year, $month, $day),
-                    'adresa' => $cities[$index % count($cities)].' bb',
+                    'adresa' => $city.' bb',
+                    'city' => $city,
                     'broj_telefona' => '38761'.str_pad((string) (500000 + $index), 6, '0', STR_PAD_LEFT),
                     'email' => strtolower($firstName.'.'.$lastName.$index.'@example.com'),
                     'fotografija_putanja' => null,

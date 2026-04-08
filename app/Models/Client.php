@@ -31,6 +31,7 @@ class Client extends Model
         'broj_dokumenta',
         'datum_rodjenja',
         'adresa',
+        'city',
         'broj_telefona',
         'email',
         'fotografija_putanja',

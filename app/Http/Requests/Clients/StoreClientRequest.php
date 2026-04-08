@@ -27,6 +27,7 @@ class StoreClientRequest extends FormRequest
             'broj_dokumenta' => ['nullable', 'string'],
             'datum_rodjenja' => ['nullable', 'date'],
             'adresa' => ['required', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
             'broj_telefona' => ['required', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
             'fotografija' => ['nullable', 'image', 'max:5120'],

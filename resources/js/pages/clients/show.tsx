@@ -50,6 +50,7 @@ type Props = {
         prezime: string;
         broj_dokumenta: string;
         datum_rodjenja: string | null;
+        city: string | null;
         adresa: string;
         broj_telefona: string;
         email: string | null;
@@ -163,7 +164,7 @@ export default function ClientProfile({ klijent: client, statistika: statistics,
                                 </p>
                                 <p className="inline-flex items-center gap-2 text-muted-foreground">
                                     <MapPin className="size-4" />
-                                    {client.adresa}
+                                    {client.city ? `${client.city}, ${client.adresa}` : client.adresa}
                                 </p>
                             </div>
                         </section>

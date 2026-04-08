@@ -248,9 +248,9 @@ class ReservationsController extends Controller
         $reservations = Reservation::query()
             ->with([
                 'arrangement:id,sifra,naziv_putovanja,destinacija,datum_polaska,datum_povratka',
-                'reservationClients.client:id,ime,prezime,broj_dokumenta,datum_rodjenja,adresa,broj_telefona,email,fotografija_putanja',
+                'reservationClients.client:id,ime,prezime,broj_dokumenta,datum_rodjenja,adresa,city,broj_telefona,email,fotografija_putanja',
                 'reservationClients.package:id,naziv,cijena',
-                'client:id,ime,prezime,broj_dokumenta,datum_rodjenja,adresa,broj_telefona,email,fotografija_putanja',
+                'client:id,ime,prezime,broj_dokumenta,datum_rodjenja,adresa,city,broj_telefona,email,fotografija_putanja',
             ])
             ->whereIn('id', $reservationIds->all())
             ->orderBy('order_num')
@@ -263,7 +263,6 @@ class ReservationsController extends Controller
                         $this->buildExportRowFromReservation(
                             reservation: $reservation,
                             client: $reservation->client,
-                            item: null,
                         ),
                     ]);
                 }
@@ -272,9 +271,20 @@ class ReservationsController extends Controller
                     return $this->buildExportRowFromReservation(
                         reservation: $reservation,
                         client: $item->client,
-                        item: $item,
                     );
                 });
+            })
+            ->values()
+            ->map(function (array $row, int $index): array {
+                return [
+                    'redni_broj' => $index + 1,
+                    'ime_i_prezime' => (string) ($row['ime_i_prezime'] ?? ''),
+                    'grad' => (string) ($row['grad'] ?? ''),
+                    'telefon' => (string) ($row['telefon'] ?? ''),
+                    'datum_rodjenja' => (string) ($row['datum_rodjenja'] ?? ''),
+                    'broj_dokumenta' => (string) ($row['broj_dokumenta'] ?? ''),
+                    'broj_rezervacije' => (string) ($row['broj_rezervacije'] ?? ''),
+                ];
             })
             ->values();
 
@@ -286,39 +296,14 @@ class ReservationsController extends Controller
     private function buildExportRowFromReservation(
         Reservation $reservation,
         ?Client $client,
-        ?ReservationClient $item,
     ): array {
-        $packagePrice = (float) ($item?->package?->cijena ?? 0);
-        $extraCharge = (float) ($item?->dodatno_na_cijenu ?? 0);
-        $discount = (float) ($item?->popust ?? 0);
-        $lineTotal = $packagePrice + $extraCharge - $discount;
-
         return [
-            'reservation_id' => (string) $reservation->id,
-            'reservation_number' => (string) ($reservation->order_num ?? ''),
-            'arrangement_code' => (string) ($reservation->arrangement?->sifra ?? ''),
-            'arrangement_name' => (string) ($reservation->arrangement?->naziv_putovanja ?? ''),
-            'destination' => (string) ($reservation->arrangement?->destinacija ?? ''),
-            'departure_date' => $reservation->arrangement?->datum_polaska?->format('d.m.Y') ?? '',
-            'return_date' => $reservation->arrangement?->datum_povratka?->format('d.m.Y') ?? '',
-            'reservation_status' => (string) ($reservation->status ?? ''),
-            'payment_status' => (string) ($reservation->placanje ?? ''),
-            'fiscal_invoice_number' => (string) ($reservation->broj_fiskalnog_racuna ?? ''),
-            'client_id' => (string) ($client?->id ?? ''),
-            'first_name' => (string) ($client?->ime ?? ''),
-            'last_name' => (string) ($client?->prezime ?? ''),
+            'ime_i_prezime' => trim((string) ($client?->ime ?? '').' '.(string) ($client?->prezime ?? '')),
+            'grad' => (string) ($client?->city ?? $client?->adresa ?? ''),
+            'telefon' => (string) ($client?->broj_telefona ?? ''),
+            'datum_rodjenja' => $client?->datum_rodjenja?->format('d.m.Y') ?? '',
             'broj_dokumenta' => (string) ($client?->broj_dokumenta ?? ''),
-            'date_of_birth' => $client?->datum_rodjenja?->format('d.m.Y') ?? '',
-            'address' => (string) ($client?->adresa ?? ''),
-            'phone' => (string) ($client?->broj_telefona ?? ''),
-            'email' => (string) ($client?->email ?? ''),
-            'photo_path' => (string) ($client?->fotografija_putanja ?? ''),
-            'package_name' => (string) ($item?->package?->naziv ?? ''),
-            'package_price' => number_format($packagePrice, 2, '.', ''),
-            'extra_charge' => number_format($extraCharge, 2, '.', ''),
-            'discount' => number_format($discount, 2, '.', ''),
-            'line_total' => number_format($lineTotal, 2, '.', ''),
-            'reservation_note' => (string) ($reservation->napomena ?? ''),
+            'broj_rezervacije' => (string) ($reservation->order_num ?? ''),
         ];
     }
 
@@ -374,7 +359,7 @@ class ReservationsController extends Controller
     public function edit(Request $request, Reservation $rezervacija): Response
     {
         $rezervacija->load([
-            'reservationClients.client:id,ime,prezime,broj_dokumenta,datum_rodjenja,adresa,broj_telefona,email,fotografija_putanja',
+            'reservationClients.client:id,ime,prezime,broj_dokumenta,datum_rodjenja,adresa,city,broj_telefona,email,fotografija_putanja',
             'reservationClients.package:id,aranzman_id,naziv',
         ]);
 
@@ -385,6 +370,7 @@ class ReservationsController extends Controller
                 'broj_dokumenta' => $stavka->client?->broj_dokumenta ?? '',
                 'datum_rodjenja' => $stavka->client?->datum_rodjenja?->toDateString() ?? '',
                 'adresa' => $stavka->client?->adresa ?? '',
+                'city' => $stavka->client?->city ?? '',
                 'broj_telefona' => $stavka->client?->broj_telefona ?? '',
                 'email' => $stavka->client?->email ?? '',
                 'dodatno_na_cijenu' => $stavka->dodatno_na_cijenu,
@@ -978,6 +964,9 @@ class ReservationsController extends Controller
                 ? $clientData['datum_rodjenja']
                 : null,
             'adresa' => $clientData['adresa'],
+            'city' => isset($clientData['city']) && $clientData['city'] !== ''
+                ? (string) $clientData['city']
+                : null,
             'broj_telefona' => $clientData['broj_telefona'],
             'email' => $clientData['email'] ?? null,
             'updated_by' => $request->user()?->id,

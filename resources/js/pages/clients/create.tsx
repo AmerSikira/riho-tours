@@ -26,6 +26,7 @@ export default function CreateClient() {
         broj_dokumenta: '',
         datum_rodjenja: '',
         adresa: '',
+        city: '',
         broj_telefona: '',
         email: '',
         fotografija: null as File | null,
@@ -110,6 +111,16 @@ export default function CreateClient() {
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
+                        <div className="grid gap-2">
+                            <Label htmlFor="city">Grad</Label>
+                            <Input
+                                id="city"
+                                value={data.city}
+                                onChange={(event) => setData('city', event.target.value)}
+                            />
+                            <InputError message={errors.city} />
+                        </div>
+
                         <div className="grid gap-2">
                             <Label htmlFor="adresa">Adresa</Label>
                             <Input

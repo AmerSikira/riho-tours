@@ -22,6 +22,7 @@ type Klijent = {
     prezime: string;
     broj_dokumenta: string;
     datum_rodjenja: string | null;
+    city: string | null;
     adresa: string;
     broj_telefona: string;
     email: string | null;
@@ -116,8 +117,8 @@ export default function ClientsIndex({ klijenti: clients, filters, status }: Pro
                     <Input
                         value={searchValue}
                         onChange={(event) => setSearchValue(event.target.value)}
-                        placeholder="Pretraži po imenu, prezimenu ili Broj dokumenta"
-                        aria-label="Pretraži po imenu, prezimenu ili Broj dokumenta"
+                        placeholder="Pretraži po imenu, prezimenu, broju dokumenta ili gradu"
+                        aria-label="Pretraži po imenu, prezimenu, broju dokumenta ili gradu"
                     />
                     <Button type="submit" variant="secondary">
                         <Search className="mr-2 size-4" />
@@ -139,6 +140,7 @@ export default function ClientsIndex({ klijenti: clients, filters, status }: Pro
                                 <th className="px-4 py-3 font-medium">Broj dokumenta</th>
                                 <th className="px-4 py-3 font-medium">Datum rođenja</th>
                                 <th className="px-4 py-3 font-medium">Kontakt</th>
+                                <th className="px-4 py-3 font-medium">Grad</th>
                                 <th className="px-4 py-3 font-medium">Adresa</th>
                                 <th className="px-4 py-3 text-right font-medium">Akcije</th>
                             </tr>
@@ -188,6 +190,7 @@ export default function ClientsIndex({ klijenti: clients, filters, status }: Pro
                                         <td className="px-4 py-3">
                                             {client.broj_telefona}
                                         </td>
+                                        <td className="px-4 py-3">{client.city || '-'}</td>
                                         <td className="px-4 py-3">{client.adresa}</td>
                                         <td className="px-4 py-3 text-right">
                                             <DropdownMenu>
@@ -221,7 +224,7 @@ export default function ClientsIndex({ klijenti: clients, filters, status }: Pro
                             ) : (
                                 <tr>
                                     <td
-                                        colSpan={6}
+                                        colSpan={7}
                                         className="px-4 py-6 text-center text-muted-foreground"
                                     >
                                         Nema klijenata za prikaz.

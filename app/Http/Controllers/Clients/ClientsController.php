@@ -22,7 +22,7 @@ class ClientsController extends Controller
     ];
 
     /**
-     * Display clients with optional search by name or document number.
+     * Display clients with optional search by name, document number, or city.
      */
     public function index(Request $request): Response
     {
@@ -34,7 +34,8 @@ class ClientsController extends Controller
                     $nestedQuery
                         ->where('ime', 'like', "%{$search}%")
                         ->orWhere('prezime', 'like', "%{$search}%")
-                        ->orWhere('broj_dokumenta', 'like', "%{$search}%");
+                        ->orWhere('broj_dokumenta', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%");
                 });
             })
             ->orderBy('prezime')
@@ -50,6 +51,7 @@ class ClientsController extends Controller
                 'broj_dokumenta' => $klijent->broj_dokumenta ?? '',
                 'datum_rodjenja' => $klijent->datum_rodjenja?->toDateString(),
                 'adresa' => $klijent->adresa,
+                'city' => $klijent->city,
                 'broj_telefona' => $klijent->broj_telefona,
                 'email' => $klijent->email,
                 'fotografija_url' => $klijent->fotografija_putanja
@@ -68,7 +70,7 @@ class ClientsController extends Controller
     }
 
     /**
-     * Search clients by partial name, surname, or document number for reservation autocomplete.
+     * Search clients by partial name, surname, document number, or city for reservation autocomplete.
      */
     public function search(Request $request): JsonResponse
     {
@@ -88,7 +90,8 @@ class ClientsController extends Controller
                 $query
                     ->where('ime', 'like', "%{$search}%")
                     ->orWhere('prezime', 'like', "%{$search}%")
-                    ->orWhere('broj_dokumenta', 'like', "%{$search}%");
+                    ->orWhere('broj_dokumenta', 'like', "%{$search}%")
+                    ->orWhere('city', 'like', "%{$search}%");
             })
             ->orderBy('prezime')
             ->orderBy('ime')
@@ -103,6 +106,7 @@ class ClientsController extends Controller
                 'broj_dokumenta' => $klijent->broj_dokumenta ?? '',
                 'datum_rodjenja' => $klijent->datum_rodjenja?->toDateString(),
                 'adresa' => $klijent->adresa,
+                'city' => $klijent->city,
                 'broj_telefona' => $klijent->broj_telefona,
                 'email' => $klijent->email,
                 'fotografija_url' => $klijent->fotografija_putanja
@@ -184,6 +188,7 @@ class ClientsController extends Controller
                 'broj_dokumenta' => $klijent->broj_dokumenta ?? '',
                 'datum_rodjenja' => $klijent->datum_rodjenja?->toDateString(),
                 'adresa' => $klijent->adresa,
+                'city' => $klijent->city,
                 'broj_telefona' => $klijent->broj_telefona,
                 'email' => $klijent->email,
                 'fotografija_url' => $klijent->fotografija_putanja
@@ -223,6 +228,7 @@ class ClientsController extends Controller
                 'broj_dokumenta' => $klijent->broj_dokumenta ?? '',
                 'datum_rodjenja' => $klijent->datum_rodjenja?->toDateString() ?? '',
                 'adresa' => $klijent->adresa,
+                'city' => $klijent->city ?? '',
                 'broj_telefona' => $klijent->broj_telefona,
                 'email' => $klijent->email,
                 'fotografija_url' => $klijent->fotografija_putanja
@@ -246,6 +252,7 @@ class ClientsController extends Controller
             'broj_dokumenta' => $validated['broj_dokumenta'] ?? null,
             'datum_rodjenja' => $validated['datum_rodjenja'] ?? null,
             'adresa' => $validated['adresa'],
+            'city' => $validated['city'] ?? null,
             'broj_telefona' => $validated['broj_telefona'],
             'email' => $validated['email'] ?? null,
             'fotografija_putanja' => $photoPath,
@@ -278,6 +285,7 @@ class ClientsController extends Controller
             'broj_dokumenta' => $validated['broj_dokumenta'] ?? null,
             'datum_rodjenja' => $validated['datum_rodjenja'] ?? null,
             'adresa' => $validated['adresa'],
+            'city' => $validated['city'] ?? null,
             'broj_telefona' => $validated['broj_telefona'],
             'email' => $validated['email'] ?? null,
             'fotografija_putanja' => $photoPath,

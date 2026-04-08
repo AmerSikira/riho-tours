@@ -16,6 +16,7 @@ type Props = {
         broj_dokumenta: string;
         datum_rodjenja: string;
         adresa: string;
+        city: string;
         broj_telefona: string;
         email: string | null;
         fotografija_url: string | null;
@@ -41,6 +42,7 @@ export default function EditClient({ klijent: client }: Props) {
         broj_dokumenta: client.broj_dokumenta,
         datum_rodjenja: client.datum_rodjenja,
         adresa: client.adresa,
+        city: client.city,
         broj_telefona: client.broj_telefona,
         email: client.email ?? '',
         fotografija: null as File | null,
@@ -126,6 +128,16 @@ export default function EditClient({ klijent: client }: Props) {
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
+                        <div className="grid gap-2">
+                            <Label htmlFor="city">Grad</Label>
+                            <Input
+                                id="city"
+                                value={data.city}
+                                onChange={(event) => setData('city', event.target.value)}
+                            />
+                            <InputError message={errors.city} />
+                        </div>
+
                         <div className="grid gap-2">
                             <Label htmlFor="adresa">Adresa</Label>
                             <Input

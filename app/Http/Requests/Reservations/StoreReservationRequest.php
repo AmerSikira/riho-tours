@@ -31,6 +31,7 @@ class StoreReservationRequest extends FormRequest
             'klijenti.*.broj_dokumenta' => ['nullable', 'string'],
             'klijenti.*.datum_rodjenja' => ['nullable', 'date'],
             'klijenti.*.adresa' => ['required', 'string', 'max:255'],
+            'klijenti.*.city' => ['nullable', 'string', 'max:255'],
             'klijenti.*.broj_telefona' => ['required', 'string', 'max:50'],
             'klijenti.*.email' => ['nullable', 'email', 'max:255'],
             'klijenti.*.fotografija' => ['nullable', 'image', 'max:5120'],

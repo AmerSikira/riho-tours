@@ -22,7 +22,8 @@ class ClientsApiController extends Controller
                         ->orWhere('prezime', 'like', "%{$search}%")
                         ->orWhere('broj_dokumenta', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
-                        ->orWhere('broj_telefona', 'like', "%{$search}%");
+                        ->orWhere('broj_telefona', 'like', "%{$search}%")
+                        ->orWhere('city', 'like', "%{$search}%");
                 });
             })
             ->latest('created_at')
@@ -39,6 +40,7 @@ class ClientsApiController extends Controller
             'broj_dokumenta' => ['nullable', 'string', 'max:255'],
             'datum_rodjenja' => ['nullable', 'date'],
             'adresa' => ['required', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
             'broj_telefona' => ['required', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
         ]);
@@ -65,6 +67,7 @@ class ClientsApiController extends Controller
             'broj_dokumenta' => ['nullable', 'string', 'max:255'],
             'datum_rodjenja' => ['nullable', 'date'],
             'adresa' => ['sometimes', 'string', 'max:255'],
+            'city' => ['nullable', 'string', 'max:255'],
             'broj_telefona' => ['sometimes', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
         ]);

@@ -37,6 +37,7 @@ type ClientFormData = {
     prezime: string;
     broj_dokumenta: string;
     datum_rodjenja: string;
+    city: string;
     adresa: string;
     broj_telefona: string;
     email: string;
@@ -76,6 +77,7 @@ type RezervacijaForm = {
         prezime: string;
         broj_dokumenta: string;
         datum_rodjenja: string;
+        city: string;
         adresa: string;
         broj_telefona: string;
         email: string;
@@ -92,6 +94,7 @@ type ClientSuggestion = {
     prezime: string;
     broj_dokumenta: string;
     datum_rodjenja: string | null;
+    city: string | null;
     adresa: string;
     broj_telefona: string;
     email: string | null;
@@ -141,6 +144,7 @@ const emptyClient = (): ClientFormData => ({
     prezime: '',
     broj_dokumenta: '',
     datum_rodjenja: '',
+    city: '',
     adresa: '',
     broj_telefona: '',
     email: '',
@@ -165,6 +169,7 @@ export default function EditReservation({
                     prezime: client.prezime,
                     broj_dokumenta: client.broj_dokumenta,
                     datum_rodjenja: client.datum_rodjenja,
+                    city: client.city,
                     adresa: client.adresa,
                     broj_telefona: client.broj_telefona,
                     email: client.email,
@@ -557,6 +562,7 @@ export default function EditReservation({
                     prezime: suggestion.prezime,
                     broj_dokumenta: suggestion.broj_dokumenta,
                     datum_rodjenja: suggestion.datum_rodjenja ?? '',
+                    city: suggestion.city ?? '',
                     adresa: suggestion.adresa,
                     broj_telefona: suggestion.broj_telefona,
                     email: suggestion.email ?? '',
@@ -1558,7 +1564,26 @@ export default function EditReservation({
                                     </div>
                                 </div>
 
-                                <div className="grid gap-4 md:grid-cols-2">
+                                <div className="grid gap-4 md:grid-cols-3">
+                                    <div className="grid gap-2">
+                                        <Label>Grad</Label>
+                                        <Input
+                                            value={clientItem.city}
+                                            onChange={(event) =>
+                                                updateClient(
+                                                    index,
+                                                    'city',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                        <InputError
+                                            message={errorFor(
+                                                `klijenti.${index}.city`,
+                                            )}
+                                        />
+                                    </div>
+
                                     <div className="grid gap-2">
                                         <Label>Adresa</Label>
                                         <Input

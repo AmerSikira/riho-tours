@@ -30,31 +30,13 @@ class ReservationsClientsExport implements FromCollection, ShouldAutoSize, WithH
     public function headings(): array
     {
         return [
-            'Reservation ID',
-            'Reservation Number',
-            'Arrangement Code',
-            'Arrangement Name',
-            'Destination',
-            'Departure Date',
-            'Return Date',
-            'Reservation Status',
-            'Payment Status',
-            'Fiscal Invoice Number',
-            'Client ID',
-            'First Name',
-            'Last Name',
+            'Redni broj',
+            'Ime i prezime',
+            'Grad',
+            'Telefon',
+            'Datum rođenja',
             'Broj dokumenta',
-            'Date of Birth',
-            'Address',
-            'Phone',
-            'Email',
-            'Photo Path',
-            'Package Name',
-            'Package Price',
-            'Extra Charge',
-            'Discount',
-            'Line Total',
-            'Reservation Note',
+            'Broj rezervacije',
         ];
     }
 }

@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Menu, Search } from 'lucide-react';
+import { BookOpen, Folder, LayoutGrid, Menu, Monitor, Moon, Search, Sun } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -29,6 +29,7 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { UserMenuContent } from '@/components/user-menu-content';
+import { useAppearance } from '@/hooks/use-appearance';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
 import { cn, toUrl } from '@/lib/utils';
@@ -68,6 +69,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     const { auth } = page.props;
     const getInitials = useInitials();
     const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
+    const { appearance, updateAppearance } = useAppearance();
 
     return (
         <>
@@ -210,6 +212,71 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                 ))}
                             </div>
                         </div>
+                        <div className="hidden items-center rounded-md border border-sidebar-border/70 p-0.5 md:flex">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                    'h-8 w-8',
+                                    appearance === 'light' && 'bg-accent text-accent-foreground',
+                                )}
+                                aria-label="Svijetli način"
+                                onClick={() => updateAppearance('light')}
+                            >
+                                <Sun className="size-4" />
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                    'h-8 w-8',
+                                    appearance === 'dark' && 'bg-accent text-accent-foreground',
+                                )}
+                                aria-label="Tamni način"
+                                onClick={() => updateAppearance('dark')}
+                            >
+                                <Moon className="size-4" />
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                    'h-8 w-8',
+                                    appearance === 'system' && 'bg-accent text-accent-foreground',
+                                )}
+                                aria-label="Sistemski način"
+                                onClick={() => updateAppearance('system')}
+                            >
+                                <Monitor className="size-4" />
+                            </Button>
+                        </div>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 md:hidden"
+                            aria-label="Promijenite temu"
+                            onClick={() =>
+                                updateAppearance(
+                                    appearance === 'light'
+                                        ? 'dark'
+                                        : appearance === 'dark'
+                                          ? 'system'
+                                          : 'light',
+                                )
+                            }
+                        >
+                            {appearance === 'dark' ? (
+                                <Moon className="size-5" />
+                            ) : appearance === 'light' ? (
+                                <Sun className="size-5" />
+                            ) : (
+                                <Monitor className="size-5" />
+                            )}
+                        </Button>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button

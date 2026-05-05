@@ -30,6 +30,7 @@
         .text-center { text-align: center; }
         .travelers-list { margin: 4px 0; padding-left: 18px; }
         .travelers-list li { margin: 1px 0; }
+        .page-break { page-break-before: always; break-before: page; }
         .document-footer-wrap { position: fixed; left: 10mm; right: 10mm; bottom: 6mm; border-top: 1px solid #000; padding-top: 3px; text-align: center; }
         .document-footer { display: inline-block; max-width: 100%; font-size: 9px; font-weight: 700; line-height: 1.2; text-align: center; color: #000; }
     </style>

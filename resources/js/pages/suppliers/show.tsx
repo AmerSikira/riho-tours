@@ -99,19 +99,19 @@ export default function ShowSupplierReport({
             <Head title={`Dobavljač - ${supplier.company_name}`} />
 
             <div className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-cyan-100 via-sky-50 to-indigo-100 p-5 shadow-sm">
+                <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-cyan-100 via-sky-50 to-indigo-100 p-5 shadow-sm dark:border-slate-700 dark:from-cyan-950/50 dark:via-sky-950/40 dark:to-indigo-950/50">
                     <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div>
-                            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+                            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                                 {supplier.company_name}
                             </h1>
-                            <p className="text-sm text-slate-700">
+                            <p className="text-sm text-slate-700 dark:text-slate-300">
                                 ID: {supplier.company_id || '-'} | PDV: {supplier.pdv || '-'}
                             </p>
-                            <p className="text-sm text-slate-700">
+                            <p className="text-sm text-slate-700 dark:text-slate-300">
                                 Kontakt: {supplier.phone || '-'} | {supplier.email || '-'}
                             </p>
-                            <p className="text-sm text-slate-700">
+                            <p className="text-sm text-slate-700 dark:text-slate-300">
                                 Adresa: {[supplier.address, supplier.city, supplier.zip]
                                     .filter(Boolean)
                                     .join(', ') || '-'}
@@ -143,43 +143,43 @@ export default function ShowSupplierReport({
                 </section>
 
                 <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <Card className="border-sky-200 bg-sky-50/70">
+                    <Card className="border-sky-200 bg-sky-50/70 dark:border-sky-900/60 dark:bg-sky-950/30">
                         <CardHeader>
                             <CardDescription>Broj rezervacija</CardDescription>
                             <CardTitle className="text-3xl">{report.reservation_count}</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <ReceiptText className="size-6 text-sky-700" />
+                            <ReceiptText className="size-6 text-sky-700 dark:text-sky-300" />
                         </CardContent>
                     </Card>
 
-                    <Card className="border-emerald-200 bg-emerald-50/70">
+                    <Card className="border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/30">
                         <CardHeader>
                             <CardDescription>Broj putnika</CardDescription>
                             <CardTitle className="text-3xl">{report.people_count}</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <UsersRound className="size-6 text-emerald-700" />
+                            <UsersRound className="size-6 text-emerald-700 dark:text-emerald-300" />
                         </CardContent>
                     </Card>
 
-                    <Card className="border-amber-200 bg-amber-50/70">
+                    <Card className="border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/30">
                         <CardHeader>
                             <CardDescription>Prihod</CardDescription>
                             <CardTitle className="text-3xl">{formatMoney(report.income)} KM</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <HandCoins className="size-6 text-amber-700" />
+                            <HandCoins className="size-6 text-amber-700 dark:text-amber-300" />
                         </CardContent>
                     </Card>
 
-                    <Card className="border-violet-200 bg-violet-50/70">
+                    <Card className="border-violet-200 bg-violet-50/70 dark:border-violet-900/60 dark:bg-violet-950/30">
                         <CardHeader>
                             <CardDescription>Ukupna zarada</CardDescription>
                             <CardTitle className="text-3xl">{formatMoney(report.total_profit)} KM</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <MapPinned className="size-6 text-violet-700" />
+                            <MapPinned className="size-6 text-violet-700 dark:text-violet-300" />
                         </CardContent>
                     </Card>
                 </section>

@@ -27,6 +27,7 @@ const SHORTCUTS: ShortcutItem[] = [
     { label: 'Email kompanije', token: '{{ kompanija.email }}' },
     { label: 'Slika potpisa', token: '{{ kompanija.potpis_slika }}' },
     { label: 'Slika pečata', token: '{{ kompanija.pecat_slika }}' },
+    { label: 'Insurance company', token: '{{ company.insurance_company }}' },
     { label: 'Osiguravajuće društvo', token: '{{ kompanija.osiguravajuce_drustvo }}' },
     { label: 'Broj ugovora', token: '{{ ugovor.broj }}' },
     { label: 'Datum ugovora', token: '{{ ugovor.datum }}' },
@@ -42,6 +43,8 @@ const SHORTCUTS: ShortcutItem[] = [
     { label: 'Polisa osiguranja', token: '{{ aranzman.polisa_osiguranja }}' },
     { label: 'Ukupno finansije', token: '{{ finansije.ukupno }}' },
     { label: 'Tabela stavki', token: '{{ tabela_stavki }}' },
+    { label: 'Prijelom stranice', token: '{{ prijelom_stranice }}' },
+    { label: 'Page break', token: '{{ page_break }}' },
     { label: 'Puni pravni blok', token: '{{ kompanija.puni_pravni_blok }}' },
 ];
 

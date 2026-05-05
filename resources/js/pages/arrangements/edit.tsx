@@ -343,63 +343,63 @@ export default function EditArrangement({
                     </Button>
                 </div>
                 <section className="mx-auto grid w-full max-w-4xl gap-4 sm:grid-cols-2 md:grid-cols-3">
-                    <Card className="border-sky-200 bg-sky-50/70">
+                    <Card className="border-sky-200 bg-sky-50/70 dark:border-sky-900/60 dark:bg-sky-950/30">
                         <CardHeader>
                             <CardDescription>Broj rezervacija</CardDescription>
                             <CardTitle className="text-3xl">{statistika.broj_rezervacija}</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <ReceiptText className="size-6 text-sky-700" />
+                            <ReceiptText className="size-6 text-sky-700 dark:text-sky-300" />
                         </CardContent>
                     </Card>
 
-                    <Card className="border-emerald-200 bg-emerald-50/70">
+                    <Card className="border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/30">
                         <CardHeader>
                             <CardDescription>Broj putnika</CardDescription>
                             <CardTitle className="text-3xl">{statistika.broj_putnika}</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <UsersRound className="size-6 text-emerald-700" />
+                            <UsersRound className="size-6 text-emerald-700 dark:text-emerald-300" />
                         </CardContent>
                     </Card>
 
-                    <Card className="border-violet-200 bg-violet-50/70">
+                    <Card className="border-violet-200 bg-violet-50/70 dark:border-violet-900/60 dark:bg-violet-950/30">
                         <CardHeader>
                             <CardDescription>Prihod</CardDescription>
                             <CardTitle className="text-3xl">{formatMoney(statistika.ukupni_prihod)} KM</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <Wallet className="size-6 text-violet-700" />
+                            <Wallet className="size-6 text-violet-700 dark:text-violet-300" />
                         </CardContent>
                     </Card>
 
-                    <Card className="border-amber-200 bg-amber-50/70">
+                    <Card className="border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/30">
                         <CardHeader>
                             <CardDescription>Troškovi</CardDescription>
                             <CardTitle className="text-3xl">{formatMoney(statistika.ukupni_trosak)} KM</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <HandCoins className="size-6 text-amber-700" />
+                            <HandCoins className="size-6 text-amber-700 dark:text-amber-300" />
                         </CardContent>
                     </Card>
 
-                    <Card className="border-cyan-200 bg-cyan-50/70">
+                    <Card className="border-cyan-200 bg-cyan-50/70 dark:border-cyan-900/60 dark:bg-cyan-950/30">
                         <CardHeader>
                             <CardDescription>Potencijalna zarada</CardDescription>
                             <CardTitle className="text-3xl">{formatMoney(statistika.potencijalna_zarada)} KM</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <Wallet className="size-6 text-cyan-700" />
+                            <Wallet className="size-6 text-cyan-700 dark:text-cyan-300" />
                         </CardContent>
                     </Card>
 
-                    <Card className="border-indigo-200 bg-indigo-50/70">
+                    <Card className="border-indigo-200 bg-indigo-50/70 dark:border-indigo-900/60 dark:bg-indigo-950/30">
                         <CardHeader>
                             <CardDescription>Prosjek po putniku</CardDescription>
                             <CardTitle className="text-3xl">{formatMoney(averageProfitPerPerson)} KM</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <UsersRound className="size-6 text-indigo-700" />
+                            <UsersRound className="size-6 text-indigo-700 dark:text-indigo-300" />
                         </CardContent>
                     </Card>
                 </section>

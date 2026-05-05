@@ -65,43 +65,43 @@ export default function Dashboard({
 
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
                 <section className="grid w-full gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    <Card className="border-emerald-200 bg-emerald-50/70">
+                    <Card className="border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/30">
                         <CardHeader>
                             <CardDescription>Broj putnika registrovanih</CardDescription>
                             <CardTitle className="text-3xl">{stats.broj_putnika}</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <UsersRound className="size-6 text-emerald-700" />
+                            <UsersRound className="size-6 text-emerald-700 dark:text-emerald-300" />
                         </CardContent>
                     </Card>
 
-                    <Card className="border-amber-200 bg-amber-50/70">
+                    <Card className="border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/30">
                         <CardHeader>
                             <CardDescription>Broj aranžmana</CardDescription>
                             <CardTitle className="text-3xl">{stats.broj_aranzmana}</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <Map className="size-6 text-amber-700" />
+                            <Map className="size-6 text-amber-700 dark:text-amber-300" />
                         </CardContent>
                     </Card>
 
-                    <Card className="border-sky-200 bg-sky-50/70">
+                    <Card className="border-sky-200 bg-sky-50/70 dark:border-sky-900/60 dark:bg-sky-950/30">
                         <CardHeader>
                             <CardDescription>Broj programa</CardDescription>
                             <CardTitle className="text-3xl">{stats.broj_programa}</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <Rows3 className="size-6 text-sky-700" />
+                            <Rows3 className="size-6 text-sky-700 dark:text-sky-300" />
                         </CardContent>
                     </Card>
 
-                    <Card className="border-violet-200 bg-violet-50/70">
+                    <Card className="border-violet-200 bg-violet-50/70 dark:border-violet-900/60 dark:bg-violet-950/30">
                         <CardHeader>
                             <CardDescription>Broj rezervacija</CardDescription>
                             <CardTitle className="text-3xl">{stats.broj_rezervacija}</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <ReceiptText className="size-6 text-violet-700" />
+                            <ReceiptText className="size-6 text-violet-700 dark:text-violet-300" />
                         </CardContent>
                     </Card>
                 </section>

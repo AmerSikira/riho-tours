@@ -227,15 +227,15 @@ export default function ReportsIndex({
             <Head title="Izvještaji" />
 
             <div className="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-                <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-sky-100 via-cyan-50 to-emerald-100 p-5 shadow-sm">
+                <section className="rounded-2xl border border-slate-200 bg-gradient-to-r from-sky-100 via-cyan-50 to-emerald-100 p-5 shadow-sm dark:border-slate-700 dark:from-sky-950/50 dark:via-cyan-950/40 dark:to-emerald-950/50">
                     <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                         <div>
-                            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Izvještaji poslovanja</h1>
-                            <p className="mt-1 text-sm text-slate-700">
+                            <h1 className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Izvještaji poslovanja</h1>
+                            <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
                                 Analitika rezervacija, putnika, prihoda i aranžmana za odabrani period.
                             </p>
                         </div>
-                        <Button type="button" onClick={handleExport} className="bg-slate-900 text-white hover:bg-slate-800">
+                        <Button type="button" onClick={handleExport} className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200">
                             <Download className="mr-2 size-4" />
                             Izvoz u XLSX
                         </Button>
@@ -262,40 +262,40 @@ export default function ReportsIndex({
                 </section>
 
                 <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <Card className="border-sky-200 bg-sky-50/70">
+                    <Card className="border-sky-200 bg-sky-50/70 dark:border-sky-900/60 dark:bg-sky-950/30">
                         <CardHeader>
                             <CardDescription>Ukupan iznos</CardDescription>
                             <CardTitle className="text-3xl">{formatMoney(summary.total_revenue)} KM</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <Wallet className="size-6 text-sky-700" />
+                            <Wallet className="size-6 text-sky-700 dark:text-sky-300" />
                         </CardContent>
                     </Card>
-                    <Card className="border-emerald-200 bg-emerald-50/70">
+                    <Card className="border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/30">
                         <CardHeader>
                             <CardDescription>Broj putnika</CardDescription>
                             <CardTitle className="text-3xl">{summary.total_people}</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <UsersRound className="size-6 text-emerald-700" />
+                            <UsersRound className="size-6 text-emerald-700 dark:text-emerald-300" />
                         </CardContent>
                     </Card>
-                    <Card className="border-violet-200 bg-violet-50/70">
+                    <Card className="border-violet-200 bg-violet-50/70 dark:border-violet-900/60 dark:bg-violet-950/30">
                         <CardHeader>
                             <CardDescription>Broj rezervacija</CardDescription>
                             <CardTitle className="text-3xl">{summary.total_reservations}</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <ReceiptText className="size-6 text-violet-700" />
+                            <ReceiptText className="size-6 text-violet-700 dark:text-violet-300" />
                         </CardContent>
                     </Card>
-                    <Card className="border-amber-200 bg-amber-50/70">
+                    <Card className="border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/30">
                         <CardHeader>
                             <CardDescription>Broj aranžmana</CardDescription>
                             <CardTitle className="text-3xl">{summary.total_arrangements}</CardTitle>
                         </CardHeader>
                         <CardContent className="flex items-center justify-end">
-                            <Map className="size-6 text-amber-700" />
+                            <Map className="size-6 text-amber-700 dark:text-amber-300" />
                         </CardContent>
                     </Card>
                 </section>
@@ -381,12 +381,12 @@ export default function ReportsIndex({
                         <CardContent className="space-y-3">
                             {arrangement_performance.length > 0 ? (
                                 arrangement_performance.slice(0, 6).map((row) => (
-                                    <div key={row.arrangement_id} className="rounded-lg border border-slate-200 p-3">
+                                    <div key={row.arrangement_id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
                                         <p className="text-sm font-medium">{row.arrangement_code} - {row.arrangement_name}</p>
                                         <p className="text-xs text-muted-foreground">
                                             {row.reservations_count} rezervacija • {row.people_count} putnika
                                         </p>
-                                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                                        <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                                             {formatMoney(row.total_revenue)} KM
                                         </p>
                                     </div>

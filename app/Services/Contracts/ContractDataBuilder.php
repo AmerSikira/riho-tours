@@ -147,12 +147,14 @@ class ContractDataBuilder
             'company.full_legal_block' => $this->renderCompanyLegalBlock($data['company'] ?? []),
             'company.signature_image' => $this->renderImageTag(data_get($data, 'company.signature_url'), 'Potpis'),
             'company.stamp_image' => $this->renderImageTag(data_get($data, 'company.stamp_url'), 'Pečat'),
+            'page_break' => '<div class="page-break"></div>',
             // Bosnian aliases for computed placeholders.
             'lista_putnika' => $this->renderTravelersList($data['travelers'] ?? []),
             'tabela_stavki' => $this->renderItemsTable($data['items'] ?? []),
             'kompanija.puni_pravni_blok' => $this->renderCompanyLegalBlock($data['company'] ?? []),
             'kompanija.potpis_slika' => $this->renderImageTag(data_get($data, 'company.signature_url'), 'Potpis'),
             'kompanija.pecat_slika' => $this->renderImageTag(data_get($data, 'company.stamp_url'), 'Pečat'),
+            'prijelom_stranice' => '<div class="page-break"></div>',
         ];
     }
 

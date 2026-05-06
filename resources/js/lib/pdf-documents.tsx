@@ -1,6 +1,12 @@
 import { Document, Font, Image, Page, StyleSheet, Text, View, pdf } from '@react-pdf/renderer';
 import type { ReactElement } from 'react';
 
+const PAGE_WIDTH_PT = 595.28; // A4 width in points
+const PAGE_HORIZONTAL_PADDING_PT = 30 * 2; // left + right
+const WRITABLE_WIDTH_PT = PAGE_WIDTH_PT - PAGE_HORIZONTAL_PADDING_PT;
+const LOGO_MAX_WIDTH_PT = WRITABLE_WIDTH_PT / 3;
+const LOGO_MAX_HEIGHT_PT = 85.04; // 3cm in points
+
 type CompanyData = {
     company_name: string;
     invoice_prefix: string;
@@ -115,6 +121,11 @@ const styles = StyleSheet.create({
     signWrap: { marginTop: 8, marginLeft: 'auto', width: 160, height: 86, position: 'relative' },
     signature: { width: 124, height: 54, position: 'absolute', left: 22, top: 14, objectFit: 'contain' },
     stamp: { width: 132, height: 84, position: 'absolute', left: 18, top: 6, objectFit: 'contain' },
+    logoImage: {
+        maxWidth: LOGO_MAX_WIDTH_PT,
+        maxHeight: LOGO_MAX_HEIGHT_PT,
+        objectFit: 'contain',
+    },
 });
 
 const money = (amount: number): string => `${amount.toFixed(2)} KM`;
@@ -143,7 +154,7 @@ const Header = ({
     return (
         <View style={[styles.row, styles.between, styles.header]}>
             <View style={styles.logoWrap}>
-                {logo ? <Image src={logo} style={{ width: 180, objectFit: 'contain' }} /> : null}
+                {logo ? <Image src={logo} style={styles.logoImage} /> : null}
                 <Text>{company.address}</Text>
                 <Text>{`${company.zip || ''} ${company.city || ''}`.trim()}</Text>
                 {company.phone ? <Text>{company.phone}</Text> : null}

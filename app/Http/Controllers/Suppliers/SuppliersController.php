@@ -68,7 +68,7 @@ class SuppliersController extends Controller
             })
             ->with([
                 'arrangement:id,sifra,naziv_putovanja,destinacija,subagentski_aranzman,supplier_id',
-                'reservationClients:id,rezervacija_id,paket_id,dodatno_na_cijenu,popust',
+                'reservationClients:id,rezervacija_id,paket_id,dodatno_na_cijenu,popust,boravisna_taksa,osiguranje,doplata_jednokrevetna_soba,doplata_dodatno_sjediste,doplata_sjediste_po_zelji',
                 'reservationClients.package:id,cijena,smjestaj_trosak,transport_trosak,fakultativne_stvari_trosak,ostalo_trosak',
             ])
             ->orderByDesc('created_at')
@@ -85,8 +85,13 @@ class SuppliersController extends Controller
             foreach ($reservation->reservationClients as $item) {
                 $packagePrice = (float) ($item->package?->cijena ?? 0);
                 $extraCharge = (float) ($item->dodatno_na_cijenu ?? 0);
+                $boravisnaTaksa = (float) ($item->boravisna_taksa ?? 0);
+                $osiguranje = (float) ($item->osiguranje ?? 0);
+                $doplataJednokrevetnaSoba = (float) ($item->doplata_jednokrevetna_soba ?? 0);
+                $doplataDodatnoSjediste = (float) ($item->doplata_dodatno_sjediste ?? 0);
+                $doplataSjedistePoZelji = (float) ($item->doplata_sjediste_po_zelji ?? 0);
                 $discount = (float) ($item->popust ?? 0);
-                $income += max($packagePrice + $extraCharge - $discount, 0);
+                $income += max($packagePrice + $extraCharge + $boravisnaTaksa + $osiguranje + $doplataJednokrevetnaSoba + $doplataDodatnoSjediste + $doplataSjedistePoZelji - $discount, 0);
 
                 if ((bool) ($reservation->arrangement?->subagentski_aranzman ?? false)) {
                     $commissionPercent = (float) ($item->package?->smjestaj_trosak ?? 0);
@@ -119,8 +124,13 @@ class SuppliersController extends Controller
                     foreach ($reservation->reservationClients as $item) {
                         $packagePrice = (float) ($item->package?->cijena ?? 0);
                         $extraCharge = (float) ($item->dodatno_na_cijenu ?? 0);
+                        $boravisnaTaksa = (float) ($item->boravisna_taksa ?? 0);
+                        $osiguranje = (float) ($item->osiguranje ?? 0);
+                        $doplataJednokrevetnaSoba = (float) ($item->doplata_jednokrevetna_soba ?? 0);
+                        $doplataDodatnoSjediste = (float) ($item->doplata_dodatno_sjediste ?? 0);
+                        $doplataSjedistePoZelji = (float) ($item->doplata_sjediste_po_zelji ?? 0);
                         $discount = (float) ($item->popust ?? 0);
-                        $arrangementIncome += max($packagePrice + $extraCharge - $discount, 0);
+                        $arrangementIncome += max($packagePrice + $extraCharge + $boravisnaTaksa + $osiguranje + $doplataJednokrevetnaSoba + $doplataDodatnoSjediste + $doplataSjedistePoZelji - $discount, 0);
 
                         if ((bool) ($reservation->arrangement?->subagentski_aranzman ?? false)) {
                             $commissionPercent = (float) ($item->package?->smjestaj_trosak ?? 0);

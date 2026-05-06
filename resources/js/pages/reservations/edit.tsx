@@ -13,6 +13,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
+import {
+    InvoicePdfDocument,
+    openPdfPreview,
+} from '@/lib/pdf-documents';
 import { formatDateDisplay } from '@/lib/utils';
 import type { BreadcrumbItem } from '@/types';
 
@@ -43,6 +47,12 @@ type ClientFormData = {
     email: string;
     dodatno_na_cijenu: string;
     popust: string;
+    boravisna_taksa: string;
+    osiguranje: string;
+    doplata_jednokrevetna_soba: string;
+    doplata_dodatno_sjediste: string;
+    doplata_sjediste_po_zelji: string;
+    ime_na_predracunu_racunu: boolean;
     paket_id: string;
     fotografija: File | null;
     fotografija_url?: string | null;
@@ -83,6 +93,12 @@ type RezervacijaForm = {
         email: string;
         dodatno_na_cijenu: string | number | null;
         popust: string | number | null;
+        boravisna_taksa: string | number | null;
+        osiguranje: string | number | null;
+        doplata_jednokrevetna_soba: string | number | null;
+        doplata_dodatno_sjediste: string | number | null;
+        doplata_sjediste_po_zelji: string | number | null;
+        ime_na_predracunu_racunu?: boolean;
         paket_id: number;
         fotografija_url: string | null;
     }>;
@@ -112,6 +128,7 @@ type InstallmentFormData = {
 };
 
 type PaymentOption = 'placeno' | 'na_rate' | 'na_odgodeno';
+type InvoiceDocumentType = 'racun' | 'predracun';
 
 type Props = {
     aranzmani: ArrangementOption[];
@@ -150,10 +167,31 @@ const emptyClient = (): ClientFormData => ({
     email: '',
     dodatno_na_cijenu: '',
     popust: '',
+    boravisna_taksa: '',
+    osiguranje: '',
+    doplata_jednokrevetna_soba: '',
+    doplata_dodatno_sjediste: '',
+    doplata_sjediste_po_zelji: '',
+    ime_na_predracunu_racunu: false,
     paket_id: '',
     fotografija: null,
     fotografija_url: null,
 });
+
+const ensureInvoiceClientSelection = (clients: ClientFormData[]): ClientFormData[] => {
+    if (clients.length === 0) {
+        return [emptyClient()];
+    }
+
+    if (clients.some((client) => client.ime_na_predracunu_racunu)) {
+        return clients;
+    }
+
+    return clients.map((client, index) => ({
+        ...client,
+        ime_na_predracunu_racunu: index === 0,
+    }));
+};
 
 export default function EditReservation({
     aranzmani: arrangements,
@@ -162,7 +200,7 @@ export default function EditReservation({
 }: Props) {
     const { data, setData, patch, processing, errors } = useForm({
         aranzman_id: String(rezervacija.aranzman_id),
-        klijenti:
+        klijenti: ensureInvoiceClientSelection(
             rezervacija.klijenti.length > 0
                 ? rezervacija.klijenti.map((client) => ({
                     ime: client.ime,
@@ -179,11 +217,23 @@ export default function EditReservation({
                             : String(client.dodatno_na_cijenu),
                     popust:
                         client.popust === null ? '' : String(client.popust),
+                    boravisna_taksa:
+                        client.boravisna_taksa === null ? '' : String(client.boravisna_taksa),
+                    osiguranje:
+                        client.osiguranje === null ? '' : String(client.osiguranje),
+                    doplata_jednokrevetna_soba:
+                        client.doplata_jednokrevetna_soba === null ? '' : String(client.doplata_jednokrevetna_soba),
+                    doplata_dodatno_sjediste:
+                        client.doplata_dodatno_sjediste === null ? '' : String(client.doplata_dodatno_sjediste),
+                    doplata_sjediste_po_zelji:
+                        client.doplata_sjediste_po_zelji === null ? '' : String(client.doplata_sjediste_po_zelji),
+                    ime_na_predracunu_racunu: Boolean(client.ime_na_predracunu_racunu),
                     paket_id: String(client.paket_id),
                     fotografija: null,
                     fotografija_url: client.fotografija_url,
                 }))
-                : [emptyClient()],
+                : [{ ...emptyClient(), ime_na_predracunu_racunu: true }],
+        ),
         status: rezervacija.status,
         broj_fiskalnog_racuna: rezervacija.broj_fiskalnog_racuna,
         placanje: rezervacija.placanje,
@@ -276,8 +326,36 @@ export default function EditReservation({
         (sum, clientItem) => sum + parseMoney(clientItem.dodatno_na_cijenu),
         0,
     );
+    const boravisnaTaksaTotal = data.klijenti.reduce(
+        (sum, clientItem) => sum + parseMoney(clientItem.boravisna_taksa),
+        0,
+    );
+    const osiguranjeTotal = data.klijenti.reduce(
+        (sum, clientItem) => sum + parseMoney(clientItem.osiguranje),
+        0,
+    );
+    const doplataJednokrevetnaSobaTotal = data.klijenti.reduce(
+        (sum, clientItem) =>
+            sum + parseMoney(clientItem.doplata_jednokrevetna_soba),
+        0,
+    );
+    const doplataDodatnoSjedisteTotal = data.klijenti.reduce(
+        (sum, clientItem) => sum + parseMoney(clientItem.doplata_dodatno_sjediste),
+        0,
+    );
+    const doplataSjedistePoZeljiTotal = data.klijenti.reduce(
+        (sum, clientItem) => sum + parseMoney(clientItem.doplata_sjediste_po_zelji),
+        0,
+    );
+    const addOnsTotal =
+        extraChargeTotal +
+        boravisnaTaksaTotal +
+        osiguranjeTotal +
+        doplataJednokrevetnaSobaTotal +
+        doplataDodatnoSjedisteTotal +
+        doplataSjedistePoZeljiTotal;
 
-    const grossTotal = packageTotal + extraChargeTotal;
+    const grossTotal = packageTotal + addOnsTotal;
     const isInVatSystem = settings.u_pdv_sistemu;
     const subtotalWithoutPdv = isInVatSystem ? grossTotal / 1.17 : grossTotal;
     const pdvAmount = isInVatSystem ? grossTotal - subtotalWithoutPdv : 0;
@@ -449,14 +527,35 @@ export default function EditReservation({
             return;
         }
 
-        setData((currentData) => ({
-            ...currentData,
-            klijenti: currentData.klijenti.filter(
+        setData((currentData) => {
+            const remainingClients = currentData.klijenti.filter(
                 (_, clientIndex) => clientIndex !== index,
-            ),
-        }));
+            );
+            const hasSelectedInvoiceClient = remainingClients.some(
+                (client) => client.ime_na_predracunu_racunu,
+            );
+
+            return {
+                ...currentData,
+                klijenti: remainingClients.map((client, clientIndex) => ({
+                    ...client,
+                    ime_na_predracunu_racunu:
+                        hasSelectedInvoiceClient ? client.ime_na_predracunu_racunu : clientIndex === 0,
+                })),
+            };
+        });
         setDocumentNumberSuggestions({});
         setActiveClientSuggestions(null);
+    };
+
+    const setInvoiceClient = (index: number) => {
+        setData((currentData) => ({
+            ...currentData,
+            klijenti: currentData.klijenti.map((client, clientIndex) => ({
+                ...client,
+                ime_na_predracunu_racunu: clientIndex === index,
+            })),
+        }));
     };
 
     const handleClientAutocompleteChange = (
@@ -592,34 +691,10 @@ export default function EditReservation({
     };
 
 
-    const escapeHtml = (value: string): string =>
-        value
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#39;');
-
-    const resolveImageSource = (value: string | null | undefined): string => {
-        if (!value) {
-            return '';
-        }
-
-        if (
-            value.startsWith('data:') ||
-            value.startsWith('http://') ||
-            value.startsWith('https://')
-        ) {
-            return value;
-        }
-
-        return new URL(value, window.location.origin).toString();
-    };
-
-    const generateInstallmentInvoicePreview = (
+    const generateInstallmentInvoicePreview = async (
         installmentIndex: number,
-        invoiceTitle: string = 'Predračun',
-    ) => {
+        invoiceTitle: string = 'Predračun rate',
+    ): Promise<void> => {
         if (!selectedArrangement) {
             window.alert('Odaberite aranžman prije generisanja predračuna rate.');
 
@@ -678,171 +753,25 @@ export default function EditReservation({
             }));
         }
 
-        const companyBlock = [
-            settings.company_name,
-            settings.address,
-            [settings.zip, settings.city].filter(Boolean).join(' '),
-            settings.phone ? `Tel: ${settings.phone}` : '',
-            settings.email ? `Email: ${settings.email}` : '',
-            settings.company_id ? `ID: ${settings.company_id}` : '',
-            settings.u_pdv_sistemu && settings.pdv ? `PDV: ${settings.pdv}` : '',
-            settings.trn ? `TRN: ${settings.trn}` : '',
-        ]
-            .filter(Boolean)
-            .map(
-                (line) => `<div class="document-header-company-line">${escapeHtml(line)}</div>`,
-            )
-            .join('');
-        const footerLine = [
-            `${settings.company_name || '-'}/${settings.address || ''}, ${settings.zip || ''}, ${settings.city || ''}`.replace(
-                /,\s*,/g,
-                ',',
-            ),
-            settings.company_id ? `ID: ${settings.company_id}` : '',
-            settings.u_pdv_sistemu && settings.pdv ? `PDV broj: ${settings.pdv}` : '',
-            settings.maticni_broj_subjekta_upisa
-                ? `Matični broj subjekta upisa: ${settings.maticni_broj_subjekta_upisa}`
-                : '',
-            settings.banka ? `Banka: ${settings.banka}` : '',
-            settings.trn ? `TRN: ${settings.trn}` : '',
-            settings.iban ? `IBAN: ${settings.iban}` : '',
-            settings.swift ? `SWIFT: ${settings.swift}` : '',
-        ]
-            .filter(Boolean)
-            .map((part) => escapeHtml(String(part)))
-            .join(' / ');
-        const logoSource = resolveImageSource(settings.logo_url);
-        const signatureSource = resolveImageSource(settings.potpis_url);
-        const stampSource = resolveImageSource(settings.pecat_url);
-
-        const logoBlock = logoSource
-            ? `<img src="${escapeHtml(logoSource)}" alt="Logo" style="max-height:80px; max-width:220px; object-fit:contain;" />`
-            : '';
-        const potpisPecatBlock =
-            signatureSource || stampSource
-                ? `<div style="margin-top:20px; width:240px; height:150px; margin-left:auto; position:relative;">
-      ${signatureSource
-                    ? `<img src="${escapeHtml(signatureSource)}" alt="Potpis" style="position:absolute; z-index:2; left:50%; top:8px; transform:translateX(-50%); max-height:72px; max-width:210px; object-fit:contain;" />`
-                    : ''
-                }
-      ${stampSource
-                    ? `<img src="${escapeHtml(stampSource)}" alt="Pečat" style="position:absolute; z-index:1; left:50%; bottom:0; transform:translateX(-50%); max-height:112px; max-width:210px; object-fit:contain;" />`
-                    : ''
-                }
-    </div>`
-                : '';
-
-        const installmentInvoiceHtml = `<!doctype html>
-<html lang="bs">
-<head>
-  <meta charset="utf-8" />
-  <title>${escapeHtml(invoiceTitle)}</title>
-  <style>
-    @page { size: A4 portrait; margin: 12mm 12mm 18mm; }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; color: #111827; font-family: Arial, sans-serif; }
-    h1, h2, h3, p { margin: 0; }
-    .page { width: 186mm; min-height: 273mm; margin: 0 auto; padding-bottom: 18mm; }
-    .document-header { display: flex; justify-content: space-between; margin-bottom: 16px; gap: 16px; align-items: flex-start; }
-    .document-header-logo { width: 56%; }
-    .document-header-company { width: 44%; font-size: 10px; font-weight: 700; line-height: 1.28; text-align: left; }
-    .document-header-company-line { margin: 0; }
-    .document-meta { margin-bottom: 14px; }
-    .document-footer-wrap { position: fixed; left: 12mm; right: 12mm; bottom: 6mm; text-align: center; }
-    .document-footer { display: inline-block; width: fit-content; max-width: 176mm; font-size: 10px; font-weight: 700; line-height: 1.25; text-align: center; white-space: normal; overflow-wrap: anywhere; word-break: break-word; padding: 0 2mm; }
-    .muted { color: #6b7280; font-size: 10px; }
-    .section { margin-top: 14px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-    th, td { border: 1px solid #d1d5db; padding: 6px; font-size: 11px; text-align: left; vertical-align: top; }
-    th { background: #f3f4f6; }
-    .left { text-align: left; }
-    .center { text-align: center; }
-    .right { text-align: right; }
-    .totals { width: 72mm; margin-left: auto; margin-top: 12px; }
-    .totals td { border: 1px solid #d1d5db; }
-    .totals tr:last-child td { font-weight: 700; }
-    .avoid-break { break-inside: avoid-page; page-break-inside: avoid; }
-
-    @media screen {
-      body { background: #f3f4f6; padding: 12px; }
-      .page { width: 210mm; min-height: 297mm; background: #fff; padding: 12mm; box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12); }
-    }
-
-    @media print {
-      .page { width: auto; min-height: calc(297mm - 30mm); margin: 0; padding: 0; box-shadow: none; }
-      tr, th, td { break-inside: avoid-page; page-break-inside: avoid; }
-    }
-  </style>
-</head>
-<body>
-  <div class="page">
-  <div class="document-header">
-    <div class="document-header-logo">
-      ${logoBlock}
-    </div>
-    <div class="document-header-company">
-      ${companyBlock || '<div>-</div>'}
-    </div>
-  </div>
-  <div class="document-meta">
-    <h1>${escapeHtml(invoiceTitle)}</h1>
-    <div class="muted">Datum: ${invoiceDate}</div>
-    <div class="muted">Broj: ${invoiceNumber}</div>
-  </div>
-
-  <div class="section avoid-break">
-    <h3>Podaci o rezervaciji</h3>
-    <p><strong>Aranžman:</strong> ${escapeHtml(selectedArrangement.sifra)} - ${escapeHtml(
-            selectedArrangement.naziv_putovanja,
-        )}</p>
-    <p><strong>Destinacija:</strong> ${escapeHtml(selectedArrangement.destinacija)}</p>
-    <p><strong>Termin:</strong> ${escapeHtml(
-            formatDocumentDate(selectedArrangement.datum_polaska),
-        )} - ${escapeHtml(formatDocumentDate(selectedArrangement.datum_povratka))}</p>
-    <p><strong>Status:</strong> ${escapeHtml(data.status)}</p>
-    <p><strong>Napomena:</strong> ${escapeHtml(data.napomena || '-')}</p>
-  </div>
-
-  <div class="section">
-    <h3>Stavke</h3>
-    <table>
-      <thead>
-        <tr>
-          <th class="center">#</th>
-          <th class="left">Opis</th>
-          <th class="right">Iznos</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="center">1</td>
-          <td class="left">${escapeHtml(installmentDescription)}</td>
-          <td class="right">${formatCurrency(invoiceAmount)}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <table class="totals avoid-break">
-    <tr><td>Ukupno</td><td class="right">${formatCurrency(invoiceAmount)}</td></tr>
-  </table>
-  ${potpisPecatBlock}
-  <div class="document-footer-wrap">
-    <div class="document-footer">${footerLine}</div>
-  </div>
-  </div>
-</body>
-</html>`;
-
-        const previewWindow = window.open('', '_blank');
-
-        if (!previewWindow) {
-            return;
-        }
-
-        previewWindow.document.open();
-        previewWindow.document.write(installmentInvoiceHtml);
-        previewWindow.document.close();
+        const selectedInvoiceClient =
+            data.klijenti.find((client) => client.ime_na_predracunu_racunu) ?? data.klijenti[0];
+        await openPdfPreview(
+            <InvoicePdfDocument
+                payload={{
+                    title: invoiceTitle,
+                    number: invoiceNumber,
+                    date: invoiceDate,
+                    company: settings,
+                    arrangement: selectedArrangement,
+                    reservationStatus: data.status,
+                    note: data.napomena || '',
+                    lineItems: [{ description: installmentDescription, amount: invoiceAmount }],
+                    selectedClient: selectedInvoiceClient,
+                    totals: null,
+                }}
+            />,
+            `${invoiceTitle}-${invoiceNumber}`,
+        );
     };
 
     const reservationContractPdfPath = `/rezervacije/${rezervacija.id}/ugovor/pdf`;
@@ -893,21 +822,81 @@ export default function EditReservation({
             window.alert('Kopiranje linka nije uspjelo. Kopirajte ručno.');
         }
     };
-    const downloadContractPdfHref = `${reservationContractPdfPath}?download=1`;
     const financialDocuments = rezervacija.financial_document_links ?? [];
     const selectedFinancialDocument =
         financialDocuments.find(
             (document) => document.key === selectedFinancialDocumentKey,
         ) ?? financialDocuments[0];
-    const openSelectedFinancialDocument = () => {
-        if (!selectedFinancialDocument?.internal_url) {
+    const openSelectedFinancialDocument = async () => {
+        if (!selectedArrangement || !selectedFinancialDocument) {
             window.alert('Dokument trenutno nije dostupan.');
 
             return;
         }
 
-        window.open(selectedFinancialDocument.internal_url, '_blank', 'noopener,noreferrer');
+        const selectedInvoiceClient =
+            data.klijenti.find((client) => client.ime_na_predracunu_racunu) ?? data.klijenti[0];
+        const invoiceYear = new Date().getFullYear();
+        const buildInvoiceNumberForPreview = (suffix = '') =>
+            buildInvoiceNumber(rezervacija.order_num ?? 0, invoiceYear, suffix);
+        const mapLineItems = () =>
+            data.klijenti.flatMap((client) => {
+                const pkg = availablePackages.find((paket) => String(paket.id) === client.paket_id);
+                const traveler = `${client.ime} ${client.prezime}`.trim() || 'Putnik';
+                const rows: Array<{ description: string; amount: number }> = [];
+                const push = (description: string, amount: number) => {
+                    if (Math.abs(amount) < 0.00001) return;
+                    rows.push({ description, amount });
+                };
+                push(`${traveler} - ${pkg?.naziv ?? 'Paket'}`, parseMoney(pkg?.cijena));
+                push(`${traveler} - Boravišna taksa`, parseMoney(client.boravisna_taksa));
+                push(`${traveler} - Osiguranje`, parseMoney(client.osiguranje));
+                push(`${traveler} - Doplata za jednokrevetnu sobu`, parseMoney(client.doplata_jednokrevetna_soba));
+                push(`${traveler} - Doplata za dodatno sjedište`, parseMoney(client.doplata_dodatno_sjediste));
+                push(`${traveler} - Doplata za sjedište po želji`, parseMoney(client.doplata_sjediste_po_zelji));
+                push(`${traveler} - Dodatno na cijenu`, parseMoney(client.dodatno_na_cijenu));
+                push(`${traveler} - Popust`, -parseMoney(client.popust));
+                return rows;
+            });
+
+        if (selectedFinancialDocument.key === 'predracun' || selectedFinancialDocument.key === 'racun') {
+            const docType: InvoiceDocumentType = selectedFinancialDocument.key;
+            await openPdfPreview(
+                <InvoicePdfDocument
+                    payload={{
+                        title: docType === 'racun' ? 'Račun' : 'Predračun',
+                        number: buildInvoiceNumberForPreview(),
+                        date: formatDocumentDate(new Date().toISOString().slice(0, 10)),
+                        company: settings,
+                        arrangement: selectedArrangement,
+                        reservationStatus: data.status,
+                        note: data.napomena || '',
+                        lineItems: mapLineItems(),
+                        selectedClient: selectedInvoiceClient,
+                        totals: {
+                            addOnsTotal,
+                            subtotalWithoutPdv,
+                            pdvAmount,
+                            discountTotal,
+                            finalTotal,
+                        },
+                        fiscalInvoiceNumber:
+                            docType === 'racun' ? (data.broj_fiskalnog_racuna ?? '').trim() : undefined,
+                    }}
+                />,
+                `${selectedFinancialDocument.label}-${buildInvoiceNumberForPreview()}`,
+            );
+
+            return;
+        }
+
+        const installmentIndex = Number.parseInt(selectedFinancialDocument.key.split('_').pop() ?? '1', 10) - 1;
+        await generateInstallmentInvoicePreview(
+            Math.max(0, installmentIndex),
+            selectedFinancialDocument.key.startsWith('rata_avansna') ? 'Avansna faktura' : 'Predračun rate',
+        );
     };
+    const downloadContractPdfHref = `${reservationContractPdfPath}?download=1`;
     const financialShareText = selectedFinancialDocument
         ? `Poštovani,\n\n${selectedFinancialDocument.label} ${reservationDocumentNumber} možete pregledati na sljedećem linku:\n${selectedFinancialDocument.share_url}`
         : '';
@@ -950,10 +939,6 @@ export default function EditReservation({
             window.alert('Kopiranje linka nije uspjelo. Kopirajte ručno.');
         }
     };
-    const downloadFinancialDocumentHref = selectedFinancialDocument
-        ? `${selectedFinancialDocument.internal_url}?download=1`
-        : '';
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Uredite rezervaciju" />
@@ -1052,16 +1037,12 @@ export default function EditReservation({
                                             Kopiraj link dokumenta
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            disabled={!downloadFinancialDocumentHref}
-                                            asChild={Boolean(downloadFinancialDocumentHref)}
+                                            onSelect={(event) => {
+                                                event.preventDefault();
+                                                void openSelectedFinancialDocument();
+                                            }}
                                         >
-                                            {downloadFinancialDocumentHref ? (
-                                                <a href={downloadFinancialDocumentHref}>
-                                                    Preuzmi dokument PDF
-                                                </a>
-                                            ) : (
-                                                <span>Preuzmi dokument PDF</span>
-                                            )}
+                                            Preuzmi dokument PDF
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
@@ -1222,16 +1203,38 @@ export default function EditReservation({
                                     <p className="font-medium">
                                         Klijent #{index + 1}
                                     </p>
-                                    {data.klijenti.length > 1 && (
-                                        <Button
+                                    <div className="flex items-center gap-3">
+                                        <button
                                             type="button"
-                                            variant="ghost"
-                                            onClick={() => removeClient(index)}
+                                            role="switch"
+                                            aria-checked={clientItem.ime_na_predracunu_racunu}
+                                            onClick={() => setInvoiceClient(index)}
+                                            className="inline-flex items-center gap-2 text-sm text-muted-foreground"
                                         >
-                                            <Trash2 className="mr-2 size-4" />
-                                            Uklonite
-                                        </Button>
-                                    )}
+                                            <span>Ime na predračunu/računu</span>
+                                            <span
+                                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                                    clientItem.ime_na_predracunu_racunu ? 'bg-primary' : 'bg-muted-foreground/30'
+                                                }`}
+                                            >
+                                                <span
+                                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                                                        clientItem.ime_na_predracunu_racunu ? 'translate-x-6' : 'translate-x-1'
+                                                    }`}
+                                                />
+                                            </span>
+                                        </button>
+                                        {data.klijenti.length > 1 && (
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                onClick={() => removeClient(index)}
+                                            >
+                                                <Trash2 className="mr-2 size-4" />
+                                                Uklonite
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
 
                                 <div className="grid gap-4 md:grid-cols-2">
@@ -1417,53 +1420,85 @@ export default function EditReservation({
                                         />
                                     </div>
 
-                                    <div className="grid gap-4 md:grid-cols-2">
-                                        <div className="grid gap-2">
-                                            <Label>Dodatno na cijenu</Label>
-                                            <Input
-                                                type="number"
-                                                inputMode="decimal"
-                                                min="0"
-                                                step="0.01"
-                                                value={clientItem.dodatno_na_cijenu}
-                                                onChange={(event) =>
-                                                    updateClient(
-                                                        index,
-                                                        'dodatno_na_cijenu',
-                                                        event.target.value,
-                                                    )
-                                                }
-                                                placeholder="0.00"
-                                            />
-                                            <InputError
-                                                message={errorFor(
-                                                    `klijenti.${index}.dodatno_na_cijenu`,
-                                                )}
-                                            />
+                                    <div className="rounded-md border border-border/70 bg-muted/30 p-3">
+                                        <p className="mb-3 text-sm font-medium text-muted-foreground">
+                                            Dodatne stavke
+                                        </p>
+                                        <div className="grid gap-4 md:grid-cols-2">
+                                            <div className="grid gap-2">
+                                                <Label>Boravišna taksa</Label>
+                                                <Input type="number" inputMode="decimal" min="0" step="0.01" value={clientItem.boravisna_taksa} onChange={(event) => updateClient(index, 'boravisna_taksa', event.target.value)} placeholder="0.00" />
+                                                <InputError message={errorFor(`klijenti.${index}.boravisna_taksa`)} />
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label>Osiguranje</Label>
+                                                <Input type="number" inputMode="decimal" min="0" step="0.01" value={clientItem.osiguranje} onChange={(event) => updateClient(index, 'osiguranje', event.target.value)} placeholder="0.00" />
+                                                <InputError message={errorFor(`klijenti.${index}.osiguranje`)} />
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label>Doplata za jednokrevetnu sobu</Label>
+                                                <Input type="number" inputMode="decimal" min="0" step="0.01" value={clientItem.doplata_jednokrevetna_soba} onChange={(event) => updateClient(index, 'doplata_jednokrevetna_soba', event.target.value)} placeholder="0.00" />
+                                                <InputError message={errorFor(`klijenti.${index}.doplata_jednokrevetna_soba`)} />
+                                            </div>
+                                            <div className="grid gap-2">
+                                                <Label>Doplata za dodatno sjedište</Label>
+                                                <Input type="number" inputMode="decimal" min="0" step="0.01" value={clientItem.doplata_dodatno_sjediste} onChange={(event) => updateClient(index, 'doplata_dodatno_sjediste', event.target.value)} placeholder="0.00" />
+                                                <InputError message={errorFor(`klijenti.${index}.doplata_dodatno_sjediste`)} />
+                                            </div>
+                                            <div className="grid gap-2 md:col-span-2">
+                                                <Label>Doplata za sjedište po želji</Label>
+                                                <Input type="number" inputMode="decimal" min="0" step="0.01" value={clientItem.doplata_sjediste_po_zelji} onChange={(event) => updateClient(index, 'doplata_sjediste_po_zelji', event.target.value)} placeholder="0.00" />
+                                                <InputError message={errorFor(`klijenti.${index}.doplata_sjediste_po_zelji`)} />
+                                            </div>
                                         </div>
+                                        <div className="mt-4 grid gap-4 border-t border-border/60 pt-4 md:grid-cols-2">
+                                            <div className="grid gap-2">
+                                                <Label>Dodatno na cijenu</Label>
+                                                <Input
+                                                    type="number"
+                                                    inputMode="decimal"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={clientItem.dodatno_na_cijenu}
+                                                    onChange={(event) =>
+                                                        updateClient(
+                                                            index,
+                                                            'dodatno_na_cijenu',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="0.00"
+                                                />
+                                                <InputError
+                                                    message={errorFor(
+                                                        `klijenti.${index}.dodatno_na_cijenu`,
+                                                    )}
+                                                />
+                                            </div>
 
-                                        <div className="grid gap-2">
-                                            <Label>Popust</Label>
-                                            <Input
-                                                type="number"
-                                                inputMode="decimal"
-                                                min="0"
-                                                step="0.01"
-                                                value={clientItem.popust}
-                                                onChange={(event) =>
-                                                    updateClient(
-                                                        index,
-                                                        'popust',
-                                                        event.target.value,
-                                                    )
-                                                }
-                                                placeholder="0.00"
-                                            />
-                                            <InputError
-                                                message={errorFor(
-                                                    `klijenti.${index}.popust`,
-                                                )}
-                                            />
+                                            <div className="grid gap-2">
+                                                <Label>Popust</Label>
+                                                <Input
+                                                    type="number"
+                                                    inputMode="decimal"
+                                                    min="0"
+                                                    step="0.01"
+                                                    value={clientItem.popust}
+                                                    onChange={(event) =>
+                                                        updateClient(
+                                                            index,
+                                                            'popust',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="0.00"
+                                                />
+                                                <InputError
+                                                    message={errorFor(
+                                                        `klijenti.${index}.popust`,
+                                                    )}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
 
@@ -1954,7 +1989,7 @@ export default function EditReservation({
                                                     Dodaci
                                                 </td>
                                                 <td className="py-2 text-right font-medium">
-                                                    {formatCurrency(extraChargeTotal)}
+                                                    {formatCurrency(addOnsTotal)}
                                                 </td>
                                             </tr>
                                             <tr className="border-b">

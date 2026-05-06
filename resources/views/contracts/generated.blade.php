@@ -75,26 +75,21 @@
     </div>
 
     @php
-        $footerParts = array_filter([
-            trim(implode(' ', array_filter([
-                $company['name'] ?? '',
-                '/',
-                implode(', ', array_filter([
-                    $company['address'] ?? '',
-                ])),
-            ]))),
-            ($company['id_number'] ?? '') !== '' ? 'ID: '.$company['id_number'] : '',
-            ($company['vat_number'] ?? '') !== '' ? 'PDV broj: '.$company['vat_number'] : '',
-            ($company['registry_number'] ?? '') !== '' ? 'Matični broj subjekta upisa: '.$company['registry_number'] : '',
-            ($company['bank_name'] ?? '') !== '' ? 'Bank name: '.$company['bank_name'] : '',
-            ($company['representative_name'] ?? '') !== '' ? 'TRN: '.$company['representative_name'] : '',
-            ($company['iban'] ?? '') !== '' ? 'IBAN: '.$company['iban'] : '',
-            ($company['swift'] ?? '') !== '' ? 'SWIFT: '.$company['swift'] : '',
-        ], static fn ($part) => trim((string) $part) !== '');
+        $footerParts = array_values(array_filter([
+            trim((string) ($company['name'] ?? '')),
+            trim((string) ($company['address'] ?? '')),
+            trim((string) ($company['id_number'] ?? '')),
+            trim((string) ($company['vat_number'] ?? '')),
+            trim((string) ($company['registry_number'] ?? '')),
+            trim((string) ($company['bank_name'] ?? '')),
+            trim((string) ($company['representative_name'] ?? '')),
+            trim((string) ($company['iban'] ?? '')),
+            trim((string) ($company['swift'] ?? '')),
+        ], static fn (string $part): bool => $part !== ''));
     @endphp
 
     <div class="document-footer-wrap">
-        <div class="document-footer">{{ implode(' / ', $footerParts) }}</div>
+        <div class="document-footer">{{ implode(' ; ', $footerParts) }}</div>
     </div>
 </div>
 </body>

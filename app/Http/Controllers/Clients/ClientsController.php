@@ -145,9 +145,14 @@ class ClientsController extends Controller
         $totalSpent = $reservationItems->sum(function ($stavka): float {
             $paketCijena = (float) ($stavka->package?->cijena ?? 0);
             $dodatno = (float) ($stavka->dodatno_na_cijenu ?? 0);
+            $boravisnaTaksa = (float) ($stavka->boravisna_taksa ?? 0);
+            $osiguranje = (float) ($stavka->osiguranje ?? 0);
+            $doplataJednokrevetnaSoba = (float) ($stavka->doplata_jednokrevetna_soba ?? 0);
+            $doplataDodatnoSjediste = (float) ($stavka->doplata_dodatno_sjediste ?? 0);
+            $doplataSjedistePoZelji = (float) ($stavka->doplata_sjediste_po_zelji ?? 0);
             $popust = (float) ($stavka->popust ?? 0);
 
-            return $paketCijena + $dodatno - $popust;
+            return $paketCijena + $dodatno + $boravisnaTaksa + $osiguranje + $doplataJednokrevetnaSoba + $doplataDodatnoSjediste + $doplataSjedistePoZelji - $popust;
         });
 
         $aktivnosti = $reservationItems
@@ -169,6 +174,11 @@ class ClientsController extends Controller
                     ],
                     'dodatno_na_cijenu' => $stavka->dodatno_na_cijenu,
                     'popust' => $stavka->popust,
+                    'boravisna_taksa' => $stavka->boravisna_taksa,
+                    'osiguranje' => $stavka->osiguranje,
+                    'doplata_jednokrevetna_soba' => $stavka->doplata_jednokrevetna_soba,
+                    'doplata_dodatno_sjediste' => $stavka->doplata_dodatno_sjediste,
+                    'doplata_sjediste_po_zelji' => $stavka->doplata_sjediste_po_zelji,
                     'aranzman' => [
                         'sifra' => $stavka->reservation?->arrangement?->sifra,
                         'naziv_putovanja' => $stavka->reservation?->arrangement?->naziv_putovanja,

@@ -147,6 +147,11 @@ class ReservationsController extends Controller
                         'ime_prezime' => trim("{$stavka->client?->ime} {$stavka->client?->prezime}"),
                         'dodatno_na_cijenu' => $stavka->dodatno_na_cijenu,
                         'popust' => $stavka->popust,
+                        'boravisna_taksa' => $stavka->boravisna_taksa,
+                        'osiguranje' => $stavka->osiguranje,
+                        'doplata_jednokrevetna_soba' => $stavka->doplata_jednokrevetna_soba,
+                        'doplata_dodatno_sjediste' => $stavka->doplata_dodatno_sjediste,
+                        'doplata_sjediste_po_zelji' => $stavka->doplata_sjediste_po_zelji,
                         'paket' => [
                             'id' => $stavka->paket_id,
                             'naziv' => $stavka->package?->naziv,
@@ -375,6 +380,12 @@ class ReservationsController extends Controller
                 'email' => $stavka->client?->email ?? '',
                 'dodatno_na_cijenu' => $stavka->dodatno_na_cijenu,
                 'popust' => $stavka->popust,
+                'boravisna_taksa' => $stavka->boravisna_taksa,
+                'osiguranje' => $stavka->osiguranje,
+                'doplata_jednokrevetna_soba' => $stavka->doplata_jednokrevetna_soba,
+                'doplata_dodatno_sjediste' => $stavka->doplata_dodatno_sjediste,
+                'doplata_sjediste_po_zelji' => $stavka->doplata_sjediste_po_zelji,
+                'ime_na_predracunu_racunu' => (bool) $stavka->ime_na_predracunu_racunu,
                 'paket_id' => $stavka->paket_id,
                 'fotografija_url' => $stavka->client?->fotografija_putanja
                     ? Storage::disk('public')->url($stavka->client->fotografija_putanja)
@@ -690,6 +701,11 @@ class ReservationsController extends Controller
         $imePrezime = [];
         $firstClient = null;
         $activeClientIds = [];
+        $selectedInvoiceClientIndex = collect($klijentiData)
+            ->search(fn (array $clientData): bool => filter_var($clientData['ime_na_predracunu_racunu'] ?? false, FILTER_VALIDATE_BOOLEAN) === true);
+        if ($selectedInvoiceClientIndex === false) {
+            $selectedInvoiceClientIndex = 0;
+        }
 
         foreach ($klijentiData as $index => $clientData) {
             $klijent = $this->saveClient($request, $clientData, $index);
@@ -703,11 +719,27 @@ class ReservationsController extends Controller
 
             $stavka->fill([
                 'paket_id' => (string) $clientData['paket_id'],
+                'ime_na_predracunu_racunu' => $index === $selectedInvoiceClientIndex,
                 'dodatno_na_cijenu' => isset($clientData['dodatno_na_cijenu']) && $clientData['dodatno_na_cijenu'] !== ''
                     ? (float) $clientData['dodatno_na_cijenu']
                     : 0,
                 'popust' => isset($clientData['popust']) && $clientData['popust'] !== ''
                     ? (float) $clientData['popust']
+                    : 0,
+                'boravisna_taksa' => isset($clientData['boravisna_taksa']) && $clientData['boravisna_taksa'] !== ''
+                    ? (float) $clientData['boravisna_taksa']
+                    : 0,
+                'osiguranje' => isset($clientData['osiguranje']) && $clientData['osiguranje'] !== ''
+                    ? (float) $clientData['osiguranje']
+                    : 0,
+                'doplata_jednokrevetna_soba' => isset($clientData['doplata_jednokrevetna_soba']) && $clientData['doplata_jednokrevetna_soba'] !== ''
+                    ? (float) $clientData['doplata_jednokrevetna_soba']
+                    : 0,
+                'doplata_dodatno_sjediste' => isset($clientData['doplata_dodatno_sjediste']) && $clientData['doplata_dodatno_sjediste'] !== ''
+                    ? (float) $clientData['doplata_dodatno_sjediste']
+                    : 0,
+                'doplata_sjediste_po_zelji' => isset($clientData['doplata_sjediste_po_zelji']) && $clientData['doplata_sjediste_po_zelji'] !== ''
+                    ? (float) $clientData['doplata_sjediste_po_zelji']
                     : 0,
             ]);
             $stavka->save();

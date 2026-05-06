@@ -29,8 +29,14 @@ class ReservationClient extends Model
         'rezervacija_id',
         'klijent_id',
         'paket_id',
+        'ime_na_predracunu_racunu',
         'dodatno_na_cijenu',
         'popust',
+        'boravisna_taksa',
+        'osiguranje',
+        'doplata_jednokrevetna_soba',
+        'doplata_dodatno_sjediste',
+        'doplata_sjediste_po_zelji',
     ];
 
     /**
@@ -39,8 +45,14 @@ class ReservationClient extends Model
      * @var array<string, string>
      */
     protected $casts = [
+        'ime_na_predracunu_racunu' => 'boolean',
         'dodatno_na_cijenu' => 'decimal:2',
         'popust' => 'decimal:2',
+        'boravisna_taksa' => 'decimal:2',
+        'osiguranje' => 'decimal:2',
+        'doplata_jednokrevetna_soba' => 'decimal:2',
+        'doplata_dodatno_sjediste' => 'decimal:2',
+        'doplata_sjediste_po_zelji' => 'decimal:2',
     ];
 
     /**

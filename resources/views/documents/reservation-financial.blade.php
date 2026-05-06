@@ -7,7 +7,7 @@
         @page { size: A4 portrait; margin: 12mm 12mm 18mm; }
         * { box-sizing: border-box; }
         body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #111827; margin: 0; }
-        .page { width: 186mm; min-height: 273mm; margin: 0 auto; position: relative; padding-bottom: 22mm; }
+        .page { width: 186mm; margin: 0 auto; position: relative; padding-bottom: 22mm; }
         .header { width: 100%; margin-bottom: 14px; }
         .header-left { float: left; width: 56%; }
         .header-right { float: right; width: 44%; font-size: 10px; font-weight: 700; line-height: 1.3; text-align: left; }
@@ -18,6 +18,11 @@
         .section { margin-top: 12px; }
         .section-title { margin: 0 0 6px 0; font-size: 12px; font-weight: 700; }
         .line { margin: 0 0 3px 0; }
+        .reservation-layout { display: flex; gap: 12px; align-items: flex-start; }
+        .reservation-main { flex: 1 1 auto; min-width: 0; }
+        .invoice-client { width: 42%; border: 1px solid #d1d5db; padding: 8px; border-radius: 6px; }
+        .invoice-client-title { margin: 0 0 6px 0; font-size: 12px; font-weight: 700; }
+        .invoice-client-line { margin: 0 0 3px 0; font-size: 10px; }
         table { width: 100%; border-collapse: collapse; margin-top: 8px; }
         th, td { border: 1px solid #d1d5db; padding: 6px; font-size: 10px; vertical-align: top; }
         th { background: #f3f4f6; text-align: left; }
@@ -66,12 +71,23 @@
     </div>
 
     <div class="section">
-        <h3 class="section-title">Podaci o rezervaciji</h3>
-        <p class="line"><strong>Aranžman:</strong> {{ $reservation['arrangement']['code'] ?? '' }} - {{ $reservation['arrangement']['name'] ?? '' }}</p>
-        <p class="line"><strong>Destinacija:</strong> {{ $reservation['arrangement']['destination'] ?? '' }}</p>
-        <p class="line"><strong>Termin:</strong> {{ $reservation['arrangement']['departure_date'] ?? '' }} - {{ $reservation['arrangement']['return_date'] ?? '' }}</p>
-        <p class="line"><strong>Status:</strong> {{ $reservation['status'] ?? '' }}</p>
-        <p class="line"><strong>Napomena:</strong> {{ $reservation['note'] ?: '-' }}</p>
+        <div class="reservation-layout">
+            <div class="reservation-main">
+                <h3 class="section-title">Podaci o rezervaciji</h3>
+                <p class="line"><strong>Aranžman:</strong> {{ $reservation['arrangement']['code'] ?? '' }} - {{ $reservation['arrangement']['name'] ?? '' }}</p>
+                <p class="line"><strong>Destinacija:</strong> {{ $reservation['arrangement']['destination'] ?? '' }}</p>
+                <p class="line"><strong>Termin:</strong> {{ $reservation['arrangement']['departure_date'] ?? '' }} - {{ $reservation['arrangement']['return_date'] ?? '' }}</p>
+                <p class="line"><strong>Status:</strong> {{ $reservation['status'] ?? '' }}</p>
+                <p class="line"><strong>Napomena:</strong> {{ $reservation['note'] ?: '-' }}</p>
+            </div>
+            <div class="invoice-client">
+                <p class="invoice-client-title">Klijent</p>
+                <p class="invoice-client-line">{{ $invoice_client['full_name'] ?? '-' }}</p>
+                <p class="invoice-client-line">{{ $invoice_client['address'] ?? '-' }}</p>
+                <p class="invoice-client-line">{{ $invoice_client['phone'] ?? '-' }}</p>
+                <p class="invoice-client-line">{{ $invoice_client['email'] ?? '-' }}</p>
+            </div>
+        </div>
     </div>
 
     <div class="section">
@@ -116,18 +132,19 @@
 
     @php
         $footerParts = array_values(array_filter([
-            trim(($company['name'] ?? '').'/'.($company['address'] ?? '').', '.($company['zip'] ?? '').', '.($company['city'] ?? '')),
-            !empty($company['id_number']) ? 'ID: '.$company['id_number'] : null,
-            !empty($company['vat_number']) ? 'PDV broj: '.$company['vat_number'] : null,
-            !empty($company['maticni_broj_subjekta_upisa']) ? 'Matični broj subjekta upisa: '.$company['maticni_broj_subjekta_upisa'] : null,
-            !empty($company['bank']) ? 'Banka: '.$company['bank'] : null,
-            !empty($company['trn']) ? 'TRN: '.$company['trn'] : null,
-            !empty($company['iban']) ? 'IBAN: '.$company['iban'] : null,
-            !empty($company['swift']) ? 'SWIFT: '.$company['swift'] : null,
-        ]));
+            trim((string) ($company['name'] ?? '')),
+            trim((string) trim(($company['address'] ?? '').' '.($company['zip'] ?? '').' '.($company['city'] ?? ''))),
+            trim((string) ($company['id_number'] ?? '')),
+            trim((string) ($company['vat_number'] ?? '')),
+            trim((string) ($company['maticni_broj_subjekta_upisa'] ?? '')),
+            trim((string) ($company['bank'] ?? '')),
+            trim((string) ($company['trn'] ?? '')),
+            trim((string) ($company['iban'] ?? '')),
+            trim((string) ($company['swift'] ?? '')),
+        ], static fn (string $part): bool => $part !== ''));
     @endphp
     <div class="footer-wrap">
-        <div class="footer">{{ implode(' / ', $footerParts) }}</div>
+        <div class="footer">{{ implode(' ; ', $footerParts) }}</div>
     </div>
 </div>
 </body>

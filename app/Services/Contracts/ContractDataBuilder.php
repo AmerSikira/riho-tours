@@ -173,7 +173,22 @@ class ContractDataBuilder
                 $basePrice = (float) ($item->package?->cijena ?? 0);
                 $priceAdjustment = (float) ($item->dodatno_na_cijenu ?? 0);
                 $discount = (float) ($item->popust ?? 0);
-                $lineTotal = max($basePrice + $priceAdjustment - $discount, 0);
+                $boravisnaTaksa = (float) ($item->boravisna_taksa ?? 0);
+                $osiguranje = (float) ($item->osiguranje ?? 0);
+                $doplataJednokrevetnaSoba = (float) ($item->doplata_jednokrevetna_soba ?? 0);
+                $doplataDodatnoSjediste = (float) ($item->doplata_dodatno_sjediste ?? 0);
+                $doplataSjedistePoZelji = (float) ($item->doplata_sjediste_po_zelji ?? 0);
+                $lineTotal = max(
+                    $basePrice
+                    + $priceAdjustment
+                    + $boravisnaTaksa
+                    + $osiguranje
+                    + $doplataJednokrevetnaSoba
+                    + $doplataDodatnoSjediste
+                    + $doplataSjedistePoZelji
+                    - $discount,
+                    0
+                );
 
                 return [
                     'index' => $index + 1,
@@ -185,6 +200,11 @@ class ContractDataBuilder
                     'base_price' => $basePrice,
                     'price_adjustment' => $priceAdjustment,
                     'discount' => $discount,
+                    'boravisna_taksa' => $boravisnaTaksa,
+                    'osiguranje' => $osiguranje,
+                    'doplata_jednokrevetna_soba' => $doplataJednokrevetnaSoba,
+                    'doplata_dodatno_sjediste' => $doplataDodatnoSjediste,
+                    'doplata_sjediste_po_zelji' => $doplataSjedistePoZelji,
                     'total' => $lineTotal,
                 ];
             })
@@ -283,7 +303,7 @@ class ContractDataBuilder
     private function renderItemsTable(mixed $items): string
     {
         if (! is_array($items) || $items === []) {
-            return '<table class="items-table"><tbody><tr><td colspan="6">Nema stavki</td></tr></tbody></table>';
+            return '<table class="items-table"><tbody><tr><td colspan="7">Nema stavki</td></tr></tbody></table>';
         }
 
         $totalAmount = 0.0;
@@ -305,11 +325,24 @@ class ContractDataBuilder
                         <td class="text-right">%s</td>
                         <td class="text-center">%s</td>
                         <td class="text-right">%s</td>
+                        <td class="text-right">%s</td>
                     </tr>',
                     e((string) ($item['index'] ?? '')),
                     e((string) ($item['name'] ?? '')),
                     e((string) ($item['period'] ?? '')),
                     e(number_format($unitPrice, 2, '.', '')),
+                    e(number_format(
+                        (float) ($item['price_adjustment'] ?? 0)
+                        + (float) ($item['boravisna_taksa'] ?? 0)
+                        + (float) ($item['osiguranje'] ?? 0)
+                        + (float) ($item['doplata_jednokrevetna_soba'] ?? 0)
+                        + (float) ($item['doplata_dodatno_sjediste'] ?? 0)
+                        + (float) ($item['doplata_sjediste_po_zelji'] ?? 0)
+                        - (float) ($item['discount'] ?? 0),
+                        2,
+                        '.',
+                        ''
+                    )),
                     e((string) $quantity),
                     e(number_format($lineTotal, 2, '.', ''))
                 );
@@ -330,6 +363,7 @@ class ContractDataBuilder
                         <th>Usluga</th>
                         <th>Termin</th>
                         <th>Cijena (KM)</th>
+                        <th>Dodatne stavke (KM)</th>
                         <th>Količina</th>
                         <th>Iznos (KM)</th>
                     </tr>
@@ -337,7 +371,7 @@ class ContractDataBuilder
                 <tbody>%s</tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="5" class="text-right"><strong>UKUPNO</strong></td>
+                        <td colspan="6" class="text-right"><strong>UKUPNO</strong></td>
                         <td class="text-right"><strong>%s</strong></td>
                     </tr>
                 </tfoot>

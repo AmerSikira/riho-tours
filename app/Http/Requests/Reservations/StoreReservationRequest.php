@@ -37,6 +37,12 @@ class StoreReservationRequest extends FormRequest
             'klijenti.*.fotografija' => ['nullable', 'image', 'max:5120'],
             'klijenti.*.dodatno_na_cijenu' => ['nullable', 'numeric', 'min:0'],
             'klijenti.*.popust' => ['nullable', 'numeric', 'min:0'],
+            'klijenti.*.boravisna_taksa' => ['nullable', 'numeric', 'min:0'],
+            'klijenti.*.osiguranje' => ['nullable', 'numeric', 'min:0'],
+            'klijenti.*.doplata_jednokrevetna_soba' => ['nullable', 'numeric', 'min:0'],
+            'klijenti.*.doplata_dodatno_sjediste' => ['nullable', 'numeric', 'min:0'],
+            'klijenti.*.doplata_sjediste_po_zelji' => ['nullable', 'numeric', 'min:0'],
+            'klijenti.*.ime_na_predracunu_racunu' => ['nullable', 'boolean'],
             'klijenti.*.paket_id' => [
                 'required',
                 Rule::exists('arrangement_packages', 'id')->where(function ($query) {
@@ -63,6 +69,20 @@ class StoreReservationRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator): void {
+            $clients = $this->input('klijenti', []);
+            if (is_array($clients)) {
+                $selectedCount = collect($clients)
+                    ->filter(fn ($client) => filter_var(data_get($client, 'ime_na_predracunu_racunu', false), FILTER_VALIDATE_BOOLEAN))
+                    ->count();
+
+                if ($selectedCount > 1) {
+                    $validator->errors()->add(
+                        'klijenti',
+                        'Samo jedan klijent može imati uključeno "Ime na predračunu/računu".'
+                    );
+                }
+            }
+
             $placanje = (string) $this->input('placanje');
 
             if ($placanje !== 'na_rate') {
@@ -139,6 +159,16 @@ class StoreReservationRequest extends FormRequest
             'klijenti.*.dodatno_na_cijenu.min' => 'Dodatno na cijenu ne može biti negativno.',
             'klijenti.*.popust.numeric' => 'Popust mora biti broj.',
             'klijenti.*.popust.min' => 'Popust ne može biti negativan.',
+            'klijenti.*.boravisna_taksa.numeric' => 'Boravišna taksa mora biti broj.',
+            'klijenti.*.boravisna_taksa.min' => 'Boravišna taksa ne može biti negativna.',
+            'klijenti.*.osiguranje.numeric' => 'Osiguranje mora biti broj.',
+            'klijenti.*.osiguranje.min' => 'Osiguranje ne može biti negativno.',
+            'klijenti.*.doplata_jednokrevetna_soba.numeric' => 'Doplata za jednokrevetnu sobu mora biti broj.',
+            'klijenti.*.doplata_jednokrevetna_soba.min' => 'Doplata za jednokrevetnu sobu ne može biti negativna.',
+            'klijenti.*.doplata_dodatno_sjediste.numeric' => 'Doplata za dodatno sjedište mora biti broj.',
+            'klijenti.*.doplata_dodatno_sjediste.min' => 'Doplata za dodatno sjedište ne može biti negativna.',
+            'klijenti.*.doplata_sjediste_po_zelji.numeric' => 'Doplata za sjedište po želji mora biti broj.',
+            'klijenti.*.doplata_sjediste_po_zelji.min' => 'Doplata za sjedište po želji ne može biti negativna.',
             'klijenti.*.paket_id.required' => 'Paket je obavezan za svakog klijenta.',
             'klijenti.*.paket_id.exists' => 'Odabrani paket ne pripada izabranom aranžmanu.',
             'status.required' => 'Status rezervacije je obavezan.',

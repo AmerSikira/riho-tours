@@ -104,7 +104,7 @@ class ReportsController extends Controller
             ->whereNull('reservations.deleted_at')
             ->whereBetween('reservations.created_at', [$dateFrom, $dateTo])
             ->selectRaw(
-                'COALESCE(SUM(COALESCE(arrangement_packages.cijena, 0) + COALESCE(reservation_clients.dodatno_na_cijenu, 0) - COALESCE(reservation_clients.popust, 0)), 0) as total'
+                'COALESCE(SUM(COALESCE(arrangement_packages.cijena, 0) + COALESCE(reservation_clients.dodatno_na_cijenu, 0) + COALESCE(reservation_clients.boravisna_taksa, 0) + COALESCE(reservation_clients.osiguranje, 0) + COALESCE(reservation_clients.doplata_jednokrevetna_soba, 0) + COALESCE(reservation_clients.doplata_dodatno_sjediste, 0) + COALESCE(reservation_clients.doplata_sjediste_po_zelji, 0) - COALESCE(reservation_clients.popust, 0)), 0) as total'
             )
             ->value('total');
 
@@ -137,7 +137,7 @@ class ReportsController extends Controller
             ->whereBetween('reservations.created_at', [$dateFrom, $dateTo])
             ->selectRaw('DATE(reservations.created_at) as metric_date')
             ->selectRaw(
-                'COALESCE(SUM(COALESCE(arrangement_packages.cijena, 0) + COALESCE(reservation_clients.dodatno_na_cijenu, 0) - COALESCE(reservation_clients.popust, 0)), 0) as total_revenue'
+                'COALESCE(SUM(COALESCE(arrangement_packages.cijena, 0) + COALESCE(reservation_clients.dodatno_na_cijenu, 0) + COALESCE(reservation_clients.boravisna_taksa, 0) + COALESCE(reservation_clients.osiguranje, 0) + COALESCE(reservation_clients.doplata_jednokrevetna_soba, 0) + COALESCE(reservation_clients.doplata_dodatno_sjediste, 0) + COALESCE(reservation_clients.doplata_sjediste_po_zelji, 0) - COALESCE(reservation_clients.popust, 0)), 0) as total_revenue'
             )
             ->groupBy(DB::raw('DATE(reservations.created_at)'))
             ->orderBy('metric_date')
@@ -164,6 +164,11 @@ class ReportsController extends Controller
                 $revenue = $reservation->reservationClients
                     ->sum(fn ($item) => (float) ($item->package?->cijena ?? 0)
                         + (float) ($item->dodatno_na_cijenu ?? 0)
+                        + (float) ($item->boravisna_taksa ?? 0)
+                        + (float) ($item->osiguranje ?? 0)
+                        + (float) ($item->doplata_jednokrevetna_soba ?? 0)
+                        + (float) ($item->doplata_dodatno_sjediste ?? 0)
+                        + (float) ($item->doplata_sjediste_po_zelji ?? 0)
                         - (float) ($item->popust ?? 0));
 
                 return [

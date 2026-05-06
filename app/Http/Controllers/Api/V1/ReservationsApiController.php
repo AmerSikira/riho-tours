@@ -151,6 +151,11 @@ class ReservationsApiController extends Controller
             'klijenti.*.email' => ['nullable', 'email', 'max:255'],
             'klijenti.*.dodatno_na_cijenu' => ['nullable', 'numeric', 'min:0'],
             'klijenti.*.popust' => ['nullable', 'numeric', 'min:0'],
+            'klijenti.*.boravisna_taksa' => ['nullable', 'numeric', 'min:0'],
+            'klijenti.*.osiguranje' => ['nullable', 'numeric', 'min:0'],
+            'klijenti.*.doplata_jednokrevetna_soba' => ['nullable', 'numeric', 'min:0'],
+            'klijenti.*.doplata_dodatno_sjediste' => ['nullable', 'numeric', 'min:0'],
+            'klijenti.*.doplata_sjediste_po_zelji' => ['nullable', 'numeric', 'min:0'],
             'klijenti.*.paket_id' => [
                 'required',
                 Rule::exists('arrangement_packages', 'id')->where(function ($query) use ($request) {
@@ -227,6 +232,21 @@ class ReservationsApiController extends Controller
                     : 0,
                 'popust' => isset($clientData['popust']) && $clientData['popust'] !== ''
                     ? (float) $clientData['popust']
+                    : 0,
+                'boravisna_taksa' => isset($clientData['boravisna_taksa']) && $clientData['boravisna_taksa'] !== ''
+                    ? (float) $clientData['boravisna_taksa']
+                    : 0,
+                'osiguranje' => isset($clientData['osiguranje']) && $clientData['osiguranje'] !== ''
+                    ? (float) $clientData['osiguranje']
+                    : 0,
+                'doplata_jednokrevetna_soba' => isset($clientData['doplata_jednokrevetna_soba']) && $clientData['doplata_jednokrevetna_soba'] !== ''
+                    ? (float) $clientData['doplata_jednokrevetna_soba']
+                    : 0,
+                'doplata_dodatno_sjediste' => isset($clientData['doplata_dodatno_sjediste']) && $clientData['doplata_dodatno_sjediste'] !== ''
+                    ? (float) $clientData['doplata_dodatno_sjediste']
+                    : 0,
+                'doplata_sjediste_po_zelji' => isset($clientData['doplata_sjediste_po_zelji']) && $clientData['doplata_sjediste_po_zelji'] !== ''
+                    ? (float) $clientData['doplata_sjediste_po_zelji']
                     : 0,
             ]);
 

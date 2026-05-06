@@ -403,6 +403,11 @@ class ContractsController extends Controller
             'paket_id' => (string) $package->id,
             'dodatno_na_cijenu' => 0,
             'popust' => 0,
+            'boravisna_taksa' => 0,
+            'osiguranje' => 0,
+            'doplata_jednokrevetna_soba' => 0,
+            'doplata_dodatno_sjediste' => 0,
+            'doplata_sjediste_po_zelji' => 0,
         ]);
         $reservationClient->id = (string) Str::uuid();
         $reservationClient->setRelation('client', $client);
@@ -441,7 +446,7 @@ class ContractsController extends Controller
 
         $rezervacija->loadMissing([
             'arrangement:id,sifra,naziv_putovanja,destinacija,datum_polaska,datum_povratka',
-            'reservationClients.client:id,ime,prezime',
+            'reservationClients.client:id,ime,prezime,adresa,broj_telefona,email',
             'reservationClients.package:id,naziv,cijena',
         ]);
 
@@ -480,26 +485,65 @@ class ContractsController extends Controller
         $number = $baseNumber;
         $lineItems = [];
         $total = 0.0;
+        $selectedInvoiceClient = $rezervacija->reservationClients
+            ->firstWhere('ime_na_predracunu_racunu', true)
+            ?? $rezervacija->reservationClients->first();
 
         if ($tip === 'predracun' || $tip === 'racun') {
             $title = $tip === 'racun' ? 'Račun' : 'Predračun';
-            $lineItems = $rezervacija->reservationClients->map(function (ReservationClient $item, int $index): array {
+            $lineItems = $rezervacija->reservationClients->flatMap(function (ReservationClient $item): array {
                 $packagePrice = (float) ($item->package?->cijena ?? 0);
                 $extra = (float) ($item->dodatno_na_cijenu ?? 0);
                 $discount = (float) ($item->popust ?? 0);
-                $lineTotal = max($packagePrice + $extra - $discount, 0);
+                $boravisnaTaksa = (float) ($item->boravisna_taksa ?? 0);
+                $osiguranje = (float) ($item->osiguranje ?? 0);
+                $doplataJednokrevetnaSoba = (float) ($item->doplata_jednokrevetna_soba ?? 0);
+                $doplataDodatnoSjediste = (float) ($item->doplata_dodatno_sjediste ?? 0);
+                $doplataSjedistePoZelji = (float) ($item->doplata_sjediste_po_zelji ?? 0);
 
-                return [
-                    'index' => $index + 1,
-                    'description' => trim(sprintf(
-                        '%s - %s %s',
-                        (string) ($item->package?->naziv ?? 'Paket'),
-                        (string) ($item->client?->ime ?? ''),
-                        (string) ($item->client?->prezime ?? '')
-                    )),
-                    'amount' => $lineTotal,
-                ];
+                $traveler = trim(sprintf(
+                    '%s %s',
+                    (string) ($item->client?->ime ?? ''),
+                    (string) ($item->client?->prezime ?? '')
+                ));
+                $traveler = $traveler !== '' ? $traveler : 'Putnik';
+                $rows = [];
+
+                $pushRow = static function (array &$target, string $description, float $amount): void {
+                    if (abs($amount) < 0.00001) {
+                        return;
+                    }
+
+                    $target[] = [
+                        'description' => $description,
+                        'amount' => $amount,
+                    ];
+                };
+
+                $pushRow(
+                    $rows,
+                    sprintf('%s - %s', $traveler, (string) ($item->package?->naziv ?? 'Paket')),
+                    $packagePrice
+                );
+                $pushRow($rows, sprintf('%s - Boravišna taksa', $traveler), $boravisnaTaksa);
+                $pushRow($rows, sprintf('%s - Osiguranje', $traveler), $osiguranje);
+                $pushRow($rows, sprintf('%s - Doplata za jednokrevetnu sobu', $traveler), $doplataJednokrevetnaSoba);
+                $pushRow($rows, sprintf('%s - Doplata za dodatno sjedište', $traveler), $doplataDodatnoSjediste);
+                $pushRow($rows, sprintf('%s - Doplata za sjedište po želji', $traveler), $doplataSjedistePoZelji);
+                $pushRow($rows, sprintf('%s - Dodatno na cijenu', $traveler), $extra);
+                $pushRow($rows, sprintf('%s - Popust', $traveler), -$discount);
+
+                return $rows;
             })->values()->all();
+            $lineItems = array_values(array_map(
+                static fn (array $row, int $index): array => [
+                    'index' => $index + 1,
+                    'description' => $row['description'],
+                    'amount' => $row['amount'],
+                ],
+                $lineItems,
+                array_keys($lineItems)
+            ));
             $total = collect($lineItems)->sum('amount');
         }
 
@@ -553,6 +597,16 @@ class ContractsController extends Controller
                     'departure_date' => $rezervacija->arrangement?->datum_polaska?->format('d.m.Y') ?? '',
                     'return_date' => $rezervacija->arrangement?->datum_povratka?->format('d.m.Y') ?? '',
                 ],
+            ],
+            'invoice_client' => [
+                'full_name' => trim(sprintf(
+                    '%s %s',
+                    (string) ($selectedInvoiceClient?->client?->ime ?? ''),
+                    (string) ($selectedInvoiceClient?->client?->prezime ?? '')
+                )),
+                'address' => (string) ($selectedInvoiceClient?->client?->adresa ?? ''),
+                'phone' => (string) ($selectedInvoiceClient?->client?->broj_telefona ?? ''),
+                'email' => (string) ($selectedInvoiceClient?->client?->email ?? ''),
             ],
             'company' => $company,
             'line_items' => $lineItems,

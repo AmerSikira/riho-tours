@@ -163,7 +163,7 @@ class ArrangementsController extends Controller
         $activeReservations = $aranzman->reservations()
             ->where('status', '!=', 'otkazana')
             ->with([
-                'reservationClients:id,rezervacija_id,paket_id,dodatno_na_cijenu,popust',
+                'reservationClients:id,rezervacija_id,paket_id,dodatno_na_cijenu,popust,boravisna_taksa,osiguranje,doplata_jednokrevetna_soba,doplata_dodatno_sjediste,doplata_sjediste_po_zelji',
                 'reservationClients.package:id,cijena,smjestaj_trosak,transport_trosak,fakultativne_stvari_trosak,ostalo_trosak',
             ])
             ->get(['id', 'aranzman_id']);
@@ -179,8 +179,13 @@ class ArrangementsController extends Controller
 
                 $packagePrice = (float) ($stavka->package?->cijena ?? 0);
                 $extraCharge = (float) ($stavka->dodatno_na_cijenu ?? 0);
+                $boravisnaTaksa = (float) ($stavka->boravisna_taksa ?? 0);
+                $osiguranje = (float) ($stavka->osiguranje ?? 0);
+                $doplataJednokrevetnaSoba = (float) ($stavka->doplata_jednokrevetna_soba ?? 0);
+                $doplataDodatnoSjediste = (float) ($stavka->doplata_dodatno_sjediste ?? 0);
+                $doplataSjedistePoZelji = (float) ($stavka->doplata_sjediste_po_zelji ?? 0);
                 $discount = (float) ($stavka->popust ?? 0);
-                $moneyEarned += max($packagePrice + $extraCharge - $discount, 0);
+                $moneyEarned += max($packagePrice + $extraCharge + $boravisnaTaksa + $osiguranje + $doplataJednokrevetnaSoba + $doplataDodatnoSjediste + $doplataSjedistePoZelji - $discount, 0);
 
                 if ((bool) $aranzman->subagentski_aranzman) {
                     $commissionPercent = (float) ($stavka->package?->smjestaj_trosak ?? 0);

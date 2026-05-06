@@ -12,6 +12,7 @@ type Props = {
     dobavljac: {
         id: string;
         company_name: string;
+        odgovorna_osoba: string | null;
         company_id: string | null;
         maticni_broj_subjekta_upisa: string | null;
         pdv: string | null;
@@ -42,6 +43,7 @@ export default function EditSupplier({ dobavljac: supplier }: Props) {
 
     const { data, setData, patch, processing, errors } = useForm({
         company_name: supplier.company_name,
+        odgovorna_osoba: supplier.odgovorna_osoba ?? '',
         company_id: supplier.company_id ?? '',
         maticni_broj_subjekta_upisa: supplier.maticni_broj_subjekta_upisa ?? '',
         pdv: supplier.pdv ?? '',
@@ -96,6 +98,18 @@ export default function EditSupplier({ dobavljac: supplier }: Props) {
                             <InputError message={errors.company_name} />
                         </div>
                         <div className="grid gap-2">
+                            <Label htmlFor="odgovorna_osoba">Odgovorna osoba</Label>
+                            <Input
+                                id="odgovorna_osoba"
+                                value={data.odgovorna_osoba}
+                                onChange={(event) => setData('odgovorna_osoba', event.target.value)}
+                            />
+                            <InputError message={errors.odgovorna_osoba} />
+                        </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="grid gap-2">
                             <Label htmlFor="company_id">ID</Label>
                             <Input
                                 id="company_id"
@@ -104,9 +118,6 @@ export default function EditSupplier({ dobavljac: supplier }: Props) {
                             />
                             <InputError message={errors.company_id} />
                         </div>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
                         <div className="grid gap-2">
                             <Label htmlFor="maticni_broj_subjekta_upisa">
                                 Matični broj subjekta upisa
@@ -121,6 +132,9 @@ export default function EditSupplier({ dobavljac: supplier }: Props) {
                             />
                             <InputError message={errors.maticni_broj_subjekta_upisa} />
                         </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
                         <div className="grid gap-2">
                             <Label htmlFor="pdv">PDV</Label>
                             <Input
@@ -130,9 +144,6 @@ export default function EditSupplier({ dobavljac: supplier }: Props) {
                             />
                             <InputError message={errors.pdv} />
                         </div>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
                         <div className="grid gap-2">
                             <Label htmlFor="trn">TRN</Label>
                             <Input
@@ -142,7 +153,10 @@ export default function EditSupplier({ dobavljac: supplier }: Props) {
                             />
                             <InputError message={errors.trn} />
                         </div>
-                        <div className="grid gap-2">
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="grid gap-2 md:col-span-2">
                             <Label htmlFor="osiguravajuce_drustvo">Osiguravajuće društvo</Label>
                             <Input
                                 id="osiguravajuce_drustvo"

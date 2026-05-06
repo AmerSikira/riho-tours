@@ -23,6 +23,7 @@ class StoreSupplierRequest extends FormRequest
     {
         return [
             'company_name' => ['required', 'string', 'max:255'],
+            'odgovorna_osoba' => ['nullable', 'string', 'max:255'],
             'company_id' => ['nullable', 'string', 'max:255'],
             'maticni_broj_subjekta_upisa' => ['nullable', 'string', 'max:255'],
             'pdv' => ['nullable', 'string', 'max:255'],

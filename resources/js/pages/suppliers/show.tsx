@@ -13,6 +13,7 @@ type Supplier = {
     company_name: string;
     company_id: string | null;
     pdv: string | null;
+    odgovorna_osoba: string | null;
     email: string | null;
     phone: string | null;
     address: string | null;
@@ -107,6 +108,9 @@ export default function ShowSupplierReport({
                             </h1>
                             <p className="text-sm text-slate-700 dark:text-slate-300">
                                 ID: {supplier.company_id || '-'} | PDV: {supplier.pdv || '-'}
+                            </p>
+                            <p className="text-sm text-slate-700 dark:text-slate-300">
+                                Odgovorna osoba: {supplier.odgovorna_osoba || '-'}
                             </p>
                             <p className="text-sm text-slate-700 dark:text-slate-300">
                                 Kontakt: {supplier.phone || '-'} | {supplier.email || '-'}

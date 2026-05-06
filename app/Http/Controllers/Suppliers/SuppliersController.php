@@ -29,7 +29,8 @@ class SuppliersController extends Controller
                     $nestedQuery
                         ->where('company_name', 'like', "%{$search}%")
                         ->orWhere('company_id', 'like', "%{$search}%")
-                        ->orWhere('pdv', 'like', "%{$search}%");
+                        ->orWhere('pdv', 'like', "%{$search}%")
+                        ->orWhere('odgovorna_osoba', 'like', "%{$search}%");
                 });
             })
             ->orderBy('company_name')
@@ -40,6 +41,7 @@ class SuppliersController extends Controller
             'dobavljaci' => $suppliers->through(fn (Supplier $supplier) => [
                 'id' => $supplier->id,
                 'company_name' => $supplier->company_name,
+                'odgovorna_osoba' => $supplier->odgovorna_osoba,
                 'company_id' => $supplier->company_id,
                 'pdv' => $supplier->pdv,
                 'phone' => $supplier->phone,
@@ -166,6 +168,7 @@ class SuppliersController extends Controller
             'dobavljac' => [
                 'id' => $dobavljac->id,
                 'company_name' => $dobavljac->company_name,
+                'odgovorna_osoba' => $dobavljac->odgovorna_osoba,
                 'company_id' => $dobavljac->company_id,
                 'pdv' => $dobavljac->pdv,
                 'email' => $dobavljac->email,
@@ -225,6 +228,7 @@ class SuppliersController extends Controller
             'dobavljac' => [
                 'id' => $dobavljac->id,
                 'company_name' => $dobavljac->company_name,
+                'odgovorna_osoba' => $dobavljac->odgovorna_osoba,
                 'company_id' => $dobavljac->company_id,
                 'maticni_broj_subjekta_upisa' => $dobavljac->maticni_broj_subjekta_upisa,
                 'pdv' => $dobavljac->pdv,

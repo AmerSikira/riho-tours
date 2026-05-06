@@ -19,6 +19,7 @@ class Supplier extends Model
      */
     protected $fillable = [
         'company_name',
+        'odgovorna_osoba',
         'company_id',
         'maticni_broj_subjekta_upisa',
         'pdv',

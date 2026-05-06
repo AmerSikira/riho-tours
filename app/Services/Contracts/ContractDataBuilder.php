@@ -19,6 +19,7 @@ class ContractDataBuilder
     {
         $reservation->loadMissing([
             'arrangement:id,sifra,naziv_putovanja,destinacija,datum_polaska,datum_povratka',
+            'arrangement.supplier:id,company_name,odgovorna_osoba,company_id,maticni_broj_subjekta_upisa,pdv,trn,banka,iban,swift,osiguravajuce_drustvo,email,phone,address,city,zip',
             'reservationClients.client:id,ime,prezime,adresa,broj_telefona,email',
             'reservationClients.package:id,naziv,cijena',
             'client:id,ime,prezime,adresa,broj_telefona,email',
@@ -84,6 +85,28 @@ class ContractDataBuilder
         $finance = [
             'total' => number_format($total, 2, '.', ''),
         ];
+        $supplier = [
+            'name' => (string) ($reservation->arrangement?->supplier?->company_name ?? ''),
+            'responsible_person' => (string) ($reservation->arrangement?->supplier?->odgovorna_osoba ?? ''),
+            'id_number' => (string) ($reservation->arrangement?->supplier?->company_id ?? ''),
+            'registry_number' => (string) ($reservation->arrangement?->supplier?->maticni_broj_subjekta_upisa ?? ''),
+            'vat_number' => (string) ($reservation->arrangement?->supplier?->pdv ?? ''),
+            'trn' => (string) ($reservation->arrangement?->supplier?->trn ?? ''),
+            'bank_name' => (string) ($reservation->arrangement?->supplier?->banka ?? ''),
+            'iban' => (string) ($reservation->arrangement?->supplier?->iban ?? ''),
+            'swift' => (string) ($reservation->arrangement?->supplier?->swift ?? ''),
+            'insurance_company' => (string) ($reservation->arrangement?->supplier?->osiguravajuce_drustvo ?? ''),
+            'email' => (string) ($reservation->arrangement?->supplier?->email ?? ''),
+            'phone' => (string) ($reservation->arrangement?->supplier?->phone ?? ''),
+            'address' => (string) ($reservation->arrangement?->supplier?->address ?? ''),
+            'city' => (string) ($reservation->arrangement?->supplier?->city ?? ''),
+            'zip' => (string) ($reservation->arrangement?->supplier?->zip ?? ''),
+            'full_address' => trim(implode(', ', array_filter([
+                $reservation->arrangement?->supplier?->address,
+                $reservation->arrangement?->supplier?->zip,
+                $reservation->arrangement?->supplier?->city,
+            ]))),
+        ];
 
         return [
             'company' => $company,
@@ -92,6 +115,7 @@ class ContractDataBuilder
             'travelers' => $travelers,
             'arrangement' => $arrangement,
             'finance' => $finance,
+            'supplier' => $supplier,
             // Bosnian aliases for localized contract placeholders.
             'kompanija' => [
                 'naziv' => $company['name'],
@@ -128,6 +152,24 @@ class ContractDataBuilder
             ],
             'finansije' => [
                 'ukupno' => $finance['total'],
+            ],
+            'dobavljac' => [
+                'naziv' => $supplier['name'],
+                'odgovorna_osoba' => $supplier['responsible_person'],
+                'id_broj' => $supplier['id_number'],
+                'maticni_broj_subjekta_upisa' => $supplier['registry_number'],
+                'pdv_broj' => $supplier['vat_number'],
+                'trn' => $supplier['trn'],
+                'banka' => $supplier['bank_name'],
+                'iban' => $supplier['iban'],
+                'swift' => $supplier['swift'],
+                'osiguravajuce_drustvo' => $supplier['insurance_company'],
+                'email' => $supplier['email'],
+                'telefon' => $supplier['phone'],
+                'adresa' => $supplier['address'],
+                'grad' => $supplier['city'],
+                'postanski_broj' => $supplier['zip'],
+                'puna_adresa' => $supplier['full_address'],
             ],
             'items' => $items,
         ];

@@ -20,6 +20,7 @@ type Supplier = {
     company_name: string;
     company_id: string | null;
     pdv: string | null;
+    odgovorna_osoba: string | null;
     phone: string | null;
     email: string | null;
     address: string | null;
@@ -135,6 +136,7 @@ export default function SuppliersIndex({ dobavljaci: suppliers, filters, status 
                             <tr>
                                 <th className="px-4 py-3 font-medium">Naziv kompanije</th>
                                 <th className="px-4 py-3 font-medium">ID / PDV</th>
+                                <th className="px-4 py-3 font-medium">Odgovorna osoba</th>
                                 <th className="px-4 py-3 font-medium">Kontakt</th>
                                 <th className="px-4 py-3 font-medium">Adresa</th>
                                 <th className="px-4 py-3 text-right font-medium">Akcije</th>
@@ -153,6 +155,7 @@ export default function SuppliersIndex({ dobavljaci: suppliers, filters, status 
                                                 PDV: {supplier.pdv || '-'}
                                             </div>
                                         </td>
+                                        <td className="px-4 py-3">{supplier.odgovorna_osoba || '-'}</td>
                                         <td className="px-4 py-3">
                                             <div>{supplier.phone || '-'}</div>
                                             <div className="text-xs text-muted-foreground">
@@ -204,7 +207,7 @@ export default function SuppliersIndex({ dobavljaci: suppliers, filters, status 
                             ) : (
                                 <tr>
                                     <td
-                                        colSpan={5}
+                                        colSpan={6}
                                         className="px-4 py-6 text-center text-muted-foreground"
                                     >
                                         Nema dobavljača za prikaz.

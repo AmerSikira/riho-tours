@@ -472,7 +472,7 @@ class ReservationsController extends Controller
                 'packages' => fn ($query) => $query
                     ->where('is_active', true)
                     ->orderBy('naziv')
-                    ->select(['id', 'aranzman_id', 'naziv', 'cijena']),
+                    ->select(['id', 'aranzman_id', 'naziv', 'cijena', 'smjestaj_trosak', 'transport_trosak', 'fakultativne_stvari_trosak', 'ostalo_trosak']),
             ])
             ->orderBy('datum_polaska')
             ->get(['id', 'sifra', 'naziv_putovanja', 'destinacija', 'datum_polaska', 'datum_povratka'])
@@ -487,6 +487,10 @@ class ReservationsController extends Controller
                     'id' => $paket->id,
                     'naziv' => $paket->naziv,
                     'cijena' => $paket->cijena,
+                    'ukupni_trosak' => (float) $paket->smjestaj_trosak
+                        + (float) $paket->transport_trosak
+                        + (float) $paket->fakultativne_stvari_trosak
+                        + (float) $paket->ostalo_trosak,
                 ])->values(),
             ]);
     }

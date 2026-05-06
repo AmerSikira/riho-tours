@@ -24,6 +24,7 @@ type PackageOption = {
     id: number;
     naziv: string;
     cijena: string;
+    ukupni_trosak: string | number;
 };
 
 type ArrangementOption = {
@@ -355,15 +356,25 @@ export default function EditReservation({
         doplataDodatnoSjedisteTotal +
         doplataSjedistePoZeljiTotal;
 
+    const packageCostTotal = data.klijenti.reduce((sum, clientItem) => {
+        const selectedPackage = availablePackages.find(
+            (paket) => String(paket.id) === clientItem.paket_id,
+        );
+
+        return sum + parseMoney(selectedPackage?.ukupni_trosak);
+    }, 0);
+
     const grossTotal = packageTotal + addOnsTotal;
-    const isInVatSystem = settings.u_pdv_sistemu;
-    const subtotalWithoutPdv = isInVatSystem ? grossTotal / 1.17 : grossTotal;
-    const pdvAmount = isInVatSystem ? grossTotal - subtotalWithoutPdv : 0;
     const discountTotal = data.klijenti.reduce(
         (sum, clientItem) => sum + parseMoney(clientItem.popust),
         0,
     );
     const finalTotal = grossTotal - discountTotal;
+
+    const isInVatSystem = settings.u_pdv_sistemu;
+    const taxableProfitBase = Math.max(packageTotal - packageCostTotal - discountTotal, 0);
+    const pdvAmount = isInVatSystem ? taxableProfitBase * 0.17 : 0;
+    const subtotalWithoutPdv = isInVatSystem ? finalTotal - pdvAmount : finalTotal;
 
     const formatCurrency = (amount: number): string =>
         `${amount.toFixed(2)} KM`;

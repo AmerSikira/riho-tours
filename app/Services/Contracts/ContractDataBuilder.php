@@ -312,8 +312,16 @@ class ContractDataBuilder
         $fromValue = $this->normalizeDateValue($from);
         $toValue = $this->normalizeDateValue($to);
 
-        if ($fromValue === null || $toValue === null) {
-            return '';
+        if ($fromValue === null && $toValue === null) {
+            return '-';
+        }
+
+        if ($fromValue !== null && $toValue === null) {
+            return $this->formatDate($fromValue);
+        }
+
+        if ($fromValue === null && $toValue !== null) {
+            return $this->formatDate($toValue);
         }
 
         return sprintf('%s - %s', $this->formatDate($fromValue), $this->formatDate($toValue));
@@ -371,7 +379,7 @@ class ContractDataBuilder
     private function renderItemsTable(mixed $items): string
     {
         if (! is_array($items) || $items === []) {
-            return '<table class="items-table"><tbody><tr><td colspan="13">Nema stavki</td></tr></tbody></table>';
+            return '<table class="items-table"><tbody><tr><td colspan="9">Nema stavki</td></tr></tbody></table>';
         }
 
         $totalAmount = 0.0;
@@ -398,6 +406,15 @@ class ContractDataBuilder
                     + $doplataDodatnoSjediste
                     + $doplataSjedistePoZelji
                     - $discount;
+                $addonsBreakdown = sprintf(
+                    'Boravišna taksa: %s | Osiguranje: %s | 1/1 soba: %s | Dodatno sjedište: %s | Sjedište po želji: %s | Dodatno na cijenu: %s',
+                    number_format($boravisnaTaksa, 2, '.', ''),
+                    number_format($osiguranje, 2, '.', ''),
+                    number_format($doplataJednokrevetnaSoba, 2, '.', ''),
+                    number_format($doplataDodatnoSjediste, 2, '.', ''),
+                    number_format($doplataSjedistePoZelji, 2, '.', ''),
+                    number_format($priceAdjustment, 2, '.', '')
+                );
 
                 return sprintf(
                     '<tr>
@@ -406,11 +423,7 @@ class ContractDataBuilder
                         <td class="text-center">%s</td>
                         <td class="text-right">%s</td>
                         <td class="text-right">%s</td>
-                        <td class="text-right">%s</td>
-                        <td class="text-right">%s</td>
-                        <td class="text-right">%s</td>
-                        <td class="text-right">%s</td>
-                        <td class="text-right">%s</td>
+                        <td>%s</td>
                         <td class="text-right">%s</td>
                         <td class="text-center">%s</td>
                         <td class="text-right">%s</td>
@@ -419,12 +432,8 @@ class ContractDataBuilder
                     e((string) ($item['name'] ?? '')),
                     e((string) ($item['period'] ?? '')),
                     e(number_format($unitPrice, 2, '.', '')),
-                    e(number_format($boravisnaTaksa, 2, '.', '')),
-                    e(number_format($osiguranje, 2, '.', '')),
-                    e(number_format($doplataJednokrevetnaSoba, 2, '.', '')),
-                    e(number_format($doplataDodatnoSjediste, 2, '.', '')),
-                    e(number_format($doplataSjedistePoZelji, 2, '.', '')),
-                    e(number_format($priceAdjustment, 2, '.', '')),
+                    e(number_format($totalAddons, 2, '.', '')),
+                    e($addonsBreakdown),
                     e(number_format($discount, 2, '.', '')),
                     e((string) $quantity),
                     e(number_format($lineTotal, 2, '.', ''))
@@ -445,13 +454,9 @@ class ContractDataBuilder
                         <th>Br.</th>
                         <th>Usluga</th>
                         <th>Termin</th>
-                        <th>Osnovna cijena (KM)</th>
-                        <th>Boravišna taksa (KM)</th>
-                        <th>Osiguranje (KM)</th>
-                        <th>Doplata 1/1 soba (KM)</th>
-                        <th>Doplata dodatno sjedište (KM)</th>
-                        <th>Doplata sjedište po želji (KM)</th>
-                        <th>Dodatno na cijenu (KM)</th>
+                        <th>Osnovica (KM)</th>
+                        <th>Dodaci ukupno (KM)</th>
+                        <th>Dodaci specifikacija (KM)</th>
                         <th>Popust (KM)</th>
                         <th>Količina</th>
                         <th>Iznos (KM)</th>
@@ -460,7 +465,7 @@ class ContractDataBuilder
                 <tbody>%s</tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="12" class="text-right"><strong>UKUPNO</strong></td>
+                        <td colspan="8" class="text-right"><strong>UKUPNO</strong></td>
                         <td class="text-right"><strong>%s</strong></td>
                     </tr>
                 </tfoot>

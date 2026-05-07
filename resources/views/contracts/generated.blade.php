@@ -22,10 +22,19 @@
         .contract-content .section-label { font-size: 11px; font-weight: 700; text-decoration: underline; margin: 6px 0 3px; color: #000; }
         .contract-content .block { margin-bottom: 6px; }
         .contract-content .strong { font-weight: 700; }
-        .items-table { width: 100%; border-collapse: collapse; margin-top: 6px; color: #000; }
-        .items-table th, .items-table td { border: 1px solid #000; padding: 4px 5px; font-size: 10px; }
+        .items-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 6px; color: #000; }
+        .items-table th, .items-table td { border: 1px solid #000; padding: 4px 5px; font-size: 9px; vertical-align: top; word-break: break-word; overflow-wrap: anywhere; }
         .items-table th { text-align: left; font-weight: 700; }
         .items-table tfoot td { font-weight: 700; }
+        .items-table th:nth-child(1), .items-table td:nth-child(1) { width: 4%; }
+        .items-table th:nth-child(2), .items-table td:nth-child(2) { width: 18%; }
+        .items-table th:nth-child(3), .items-table td:nth-child(3) { width: 10%; }
+        .items-table th:nth-child(4), .items-table td:nth-child(4) { width: 9%; }
+        .items-table th:nth-child(5), .items-table td:nth-child(5) { width: 9%; }
+        .items-table th:nth-child(6), .items-table td:nth-child(6) { width: 30%; }
+        .items-table th:nth-child(7), .items-table td:nth-child(7) { width: 7%; }
+        .items-table th:nth-child(8), .items-table td:nth-child(8) { width: 5%; }
+        .items-table th:nth-child(9), .items-table td:nth-child(9) { width: 8%; }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
         .travelers-list { margin: 4px 0; padding-left: 18px; }

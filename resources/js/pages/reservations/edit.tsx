@@ -14,8 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import {
-    ContractHtmlPdfDocument,
-    downloadPdfFile,
     InvoicePdfDocument,
     openPdfPreview,
 } from '@/lib/pdf-documents';
@@ -835,6 +833,14 @@ export default function EditReservation({
             window.alert('Kopiranje linka nije uspjelo. Kopirajte ručno.');
         }
     };
+    const openContractPdfLink = (download: boolean = false) => {
+        const separator = reservationContractPdfUrl.includes('?') ? '&' : '?';
+        const targetUrl = download
+            ? `${reservationContractPdfUrl}${separator}download=1`
+            : reservationContractPdfUrl;
+
+        window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    };
     const financialDocuments = rezervacija.financial_document_links ?? [];
     const selectedFinancialDocument =
         financialDocuments.find(
@@ -908,40 +914,6 @@ export default function EditReservation({
             Math.max(0, installmentIndex),
             selectedFinancialDocument.key.startsWith('rata_avansna') ? 'Avansna faktura' : 'Predračun rate',
         );
-    };
-    const openContractPdfViaReact = async (download: boolean = false) => {
-        const response = await fetch(`/rezervacije/${rezervacija.id}/ugovor/payload`, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                Accept: 'application/json',
-            },
-        });
-
-        if (!response.ok) {
-            window.alert('Ugovor trenutno nije dostupan.');
-            return;
-        }
-
-        const payload = (await response.json()) as {
-            html: string;
-            document_title: string;
-            footer_text: string;
-        };
-
-        const doc = (
-            <ContractHtmlPdfDocument
-                title={payload.document_title || `Ugovor-${reservationDocumentNumber}`}
-                html={payload.html || ''}
-                footerText={payload.footer_text || ''}
-            />
-        );
-
-        if (download) {
-            await downloadPdfFile(doc, payload.document_title || `ugovor-${reservationDocumentNumber}`);
-            return;
-        }
-
-        await openPdfPreview(doc, payload.document_title || `Ugovor-${reservationDocumentNumber}`);
     };
     const financialShareText = selectedFinancialDocument
         ? `Poštovani,\n\n${selectedFinancialDocument.label} ${reservationDocumentNumber} možete pregledati na sljedećem linku:\n${selectedFinancialDocument.share_url}`
@@ -1099,7 +1071,7 @@ export default function EditReservation({
                                 type="button"
                                 className="rounded-r-none"
                                 onClick={() => {
-                                    void openContractPdfViaReact(false);
+                                    openContractPdfLink(false);
                                 }}
                             >
                                 Pošalji ugovor
@@ -1171,7 +1143,7 @@ export default function EditReservation({
                                     <DropdownMenuItem
                                         onSelect={(event) => {
                                             event.preventDefault();
-                                            void openContractPdfViaReact(true);
+                                            openContractPdfLink(true);
                                         }}
                                     >
                                         Preuzmi ugovor PDF

@@ -5,8 +5,10 @@ namespace App\Services\Contracts;
 use App\Models\ContractTemplate;
 use App\Models\GeneratedContract;
 use App\Models\Reservation;
+use Barryvdh\DomPDF\Facade\Pdf as DomPdf;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Browsershot\Browsershot;
 use Spatie\LaravelPdf\Facades\Pdf as LaravelPdf;
 
@@ -87,7 +89,21 @@ class ContractGenerationService
 
             return true;
         } catch (\Throwable $exception) {
-            Log::warning('Browsershot contract PDF generation failed, falling back to HTML contract rendering.', [
+            Log::warning('Browsershot contract PDF generation failed, trying DOMPDF fallback.', [
+                'error' => $exception->getMessage(),
+            ]);
+        }
+
+        try {
+            $pdfBinary = DomPdf::loadView('contracts.generated', $viewData)
+                ->setPaper('a4')
+                ->output();
+
+            Storage::disk('public')->put($pdfPath, $pdfBinary);
+
+            return true;
+        } catch (\Throwable $exception) {
+            Log::error('DOMPDF contract fallback failed.', [
                 'error' => $exception->getMessage(),
             ]);
         }

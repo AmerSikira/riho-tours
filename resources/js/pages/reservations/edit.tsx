@@ -38,6 +38,7 @@ type ArrangementOption = {
 };
 
 type ClientFormData = {
+    id: string | null;
     ime: string;
     prezime: string;
     broj_dokumenta: string;
@@ -84,6 +85,7 @@ type RezervacijaForm = {
     }>;
     napomena: string;
     klijenti: Array<{
+        id?: string | null;
         ime: string;
         prezime: string;
         broj_dokumenta: string;
@@ -158,6 +160,7 @@ type Props = {
 };
 
 const emptyClient = (): ClientFormData => ({
+    id: null,
     ime: '',
     prezime: '',
     broj_dokumenta: '',
@@ -204,6 +207,7 @@ export default function EditReservation({
         klijenti: ensureInvoiceClientSelection(
             rezervacija.klijenti.length > 0
                 ? rezervacija.klijenti.map((client) => ({
+                    id: client.id ? String(client.id) : null,
                     ime: client.ime,
                     prezime: client.prezime,
                     broj_dokumenta: client.broj_dokumenta,
@@ -668,6 +672,7 @@ export default function EditReservation({
 
                 return {
                     ...client,
+                    id: String(suggestion.id),
                     ime: suggestion.ime,
                     prezime: suggestion.prezime,
                     broj_dokumenta: suggestion.broj_dokumenta,

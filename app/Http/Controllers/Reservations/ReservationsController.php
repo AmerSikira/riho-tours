@@ -370,6 +370,7 @@ class ReservationsController extends Controller
 
         $klijenti = $rezervacija->reservationClients->map(function (ReservationClient $stavka): array {
             return [
+                'id' => $stavka->client?->id,
                 'ime' => $stavka->client?->ime ?? '',
                 'prezime' => $stavka->client?->prezime ?? '',
                 'broj_dokumenta' => $stavka->client?->broj_dokumenta ?? '',
@@ -974,15 +975,25 @@ class ReservationsController extends Controller
     {
         $clientPhotoPath = $request->file("klijenti.{$index}.fotografija")?->store('klijenti', 'public');
 
+        $clientId = isset($clientData['id']) && $clientData['id'] !== ''
+            ? (string) $clientData['id']
+            : null;
         $documentNumber = isset($clientData['broj_dokumenta']) && $clientData['broj_dokumenta'] !== ''
             ? (string) $clientData['broj_dokumenta']
             : null;
 
-        $klijent = $documentNumber === null
-            ? new Client()
-            : Client::query()->firstOrNew([
-                'broj_dokumenta' => $documentNumber,
-            ]);
+        $klijent = null;
+        if ($clientId !== null) {
+            $klijent = Client::query()->find($clientId);
+        }
+
+        if (! $klijent) {
+            $klijent = $documentNumber === null
+                ? new Client()
+                : Client::query()->firstOrNew([
+                    'broj_dokumenta' => $documentNumber,
+                ]);
+        }
 
         if ($clientPhotoPath) {
             if ($klijent->exists && $klijent->fotografija_putanja) {

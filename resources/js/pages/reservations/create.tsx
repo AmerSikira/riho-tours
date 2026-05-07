@@ -35,6 +35,7 @@ type ArrangementOption = {
 };
 
 type ClientFormData = {
+    id: string | null;
     ime: string;
     prezime: string;
     broj_dokumenta: string;
@@ -120,6 +121,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const emptyClient = (): ClientFormData => ({
+    id: null,
     ime: '',
     prezime: '',
     broj_dokumenta: '',
@@ -560,6 +562,7 @@ export default function CreateReservation({
 
                 return {
                     ...client,
+                    id: String(suggestion.id),
                     ime: suggestion.ime,
                     prezime: suggestion.prezime,
                     broj_dokumenta: suggestion.broj_dokumenta,

@@ -26,6 +26,7 @@ class StoreReservationRequest extends FormRequest
             'aranzman_id' => ['required', 'exists:arrangements,id'],
             'contract_template_id' => ['nullable', 'exists:contract_templates,id'],
             'klijenti' => ['required', 'array', 'min:1'],
+            'klijenti.*.id' => ['nullable', 'exists:clients,id'],
             'klijenti.*.ime' => ['required', 'string', 'max:255'],
             'klijenti.*.prezime' => ['required', 'string', 'max:255'],
             'klijenti.*.broj_dokumenta' => ['nullable', 'string'],

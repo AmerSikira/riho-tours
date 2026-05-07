@@ -18,7 +18,9 @@ class ContractDataBuilder
     public function build(Reservation $reservation): array
     {
         $reservation->loadMissing([
-            'arrangement:id,sifra,naziv_putovanja,destinacija,datum_polaska,datum_povratka',
+            'arrangement' => fn ($query) => $query
+                ->withTrashed()
+                ->select(['id', 'sifra', 'naziv_putovanja', 'destinacija', 'datum_polaska', 'datum_povratka']),
             'arrangement.supplier:id,company_name,odgovorna_osoba,company_id,maticni_broj_subjekta_upisa,pdv,trn,banka,iban,swift,osiguravajuce_drustvo,email,phone,address,city,zip',
             'reservationClients.client:id,ime,prezime,adresa,broj_telefona,email',
             'reservationClients.package:id,naziv,cijena',
@@ -74,8 +76,8 @@ class ContractDataBuilder
         $arrangement = [
             'name' => (string) ($reservation->arrangement?->naziv_putovanja ?? ''),
             'period' => $this->formatPeriod(
-                $reservation->arrangement?->datum_polaska?->format('Y-m-d'),
-                $reservation->arrangement?->datum_povratka?->format('Y-m-d')
+                $reservation->arrangement?->datum_polaska,
+                $reservation->arrangement?->datum_povratka
             ),
             'destination' => (string) ($reservation->arrangement?->destinacija ?? ''),
             'code' => (string) ($reservation->arrangement?->sifra ?? ''),
@@ -206,8 +208,8 @@ class ContractDataBuilder
     private function buildItems(Reservation $reservation): array
     {
         $period = $this->formatPeriod(
-            $reservation->arrangement?->datum_polaska?->format('Y-m-d'),
-            $reservation->arrangement?->datum_povratka?->format('Y-m-d')
+            $reservation->arrangement?->datum_polaska,
+            $reservation->arrangement?->datum_povratka
         );
 
         return $reservation->reservationClients
@@ -251,6 +253,12 @@ class ContractDataBuilder
                 ];
             })
             ->map(function (array $item) use ($period): array {
+                $travelerName = trim((string) ($item['traveler'] ?? ''));
+                $packageName = trim((string) ($item['name'] ?? 'Package'));
+
+                $item['name'] = $travelerName !== ''
+                    ? sprintf('%s - %s', $travelerName, $packageName)
+                    : $packageName;
                 $item['period'] = $period;
                 $item['quantity'] = 1;
 
@@ -299,13 +307,16 @@ class ContractDataBuilder
         return [];
     }
 
-    private function formatPeriod(?string $from, ?string $to): string
+    private function formatPeriod(mixed $from, mixed $to): string
     {
-        if ($from === null || $to === null) {
+        $fromValue = $this->normalizeDateValue($from);
+        $toValue = $this->normalizeDateValue($to);
+
+        if ($fromValue === null || $toValue === null) {
             return '';
         }
 
-        return sprintf('%s - %s', $this->formatDate($from), $this->formatDate($to));
+        return sprintf('%s - %s', $this->formatDate($fromValue), $this->formatDate($toValue));
     }
 
     private function formatDate(string $value): string
@@ -315,6 +326,21 @@ class ContractDataBuilder
         } catch (\Throwable) {
             return $value;
         }
+    }
+
+    private function normalizeDateValue(mixed $value): ?string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        if (is_string($value)) {
+            $trimmed = trim($value);
+
+            return $trimmed !== '' ? $trimmed : null;
+        }
+
+        return null;
     }
 
     /**
@@ -345,7 +371,7 @@ class ContractDataBuilder
     private function renderItemsTable(mixed $items): string
     {
         if (! is_array($items) || $items === []) {
-            return '<table class="items-table"><tbody><tr><td colspan="7">Nema stavki</td></tr></tbody></table>';
+            return '<table class="items-table"><tbody><tr><td colspan="13">Nema stavki</td></tr></tbody></table>';
         }
 
         $totalAmount = 0.0;
@@ -358,6 +384,20 @@ class ContractDataBuilder
                 $lineTotal = (float) ($item['total'] ?? 0);
                 $quantity = (int) ($item['quantity'] ?? 1);
                 $unitPrice = $quantity > 0 ? $lineTotal / $quantity : $lineTotal;
+                $boravisnaTaksa = (float) ($item['boravisna_taksa'] ?? 0);
+                $osiguranje = (float) ($item['osiguranje'] ?? 0);
+                $doplataJednokrevetnaSoba = (float) ($item['doplata_jednokrevetna_soba'] ?? 0);
+                $doplataDodatnoSjediste = (float) ($item['doplata_dodatno_sjediste'] ?? 0);
+                $doplataSjedistePoZelji = (float) ($item['doplata_sjediste_po_zelji'] ?? 0);
+                $priceAdjustment = (float) ($item['price_adjustment'] ?? 0);
+                $discount = (float) ($item['discount'] ?? 0);
+                $totalAddons = $priceAdjustment
+                    + $boravisnaTaksa
+                    + $osiguranje
+                    + $doplataJednokrevetnaSoba
+                    + $doplataDodatnoSjediste
+                    + $doplataSjedistePoZelji
+                    - $discount;
 
                 return sprintf(
                     '<tr>
@@ -365,26 +405,27 @@ class ContractDataBuilder
                         <td>%s</td>
                         <td class="text-center">%s</td>
                         <td class="text-right">%s</td>
-                        <td class="text-center">%s</td>
                         <td class="text-right">%s</td>
+                        <td class="text-right">%s</td>
+                        <td class="text-right">%s</td>
+                        <td class="text-right">%s</td>
+                        <td class="text-right">%s</td>
+                        <td class="text-right">%s</td>
+                        <td class="text-right">%s</td>
+                        <td class="text-center">%s</td>
                         <td class="text-right">%s</td>
                     </tr>',
                     e((string) ($item['index'] ?? '')),
                     e((string) ($item['name'] ?? '')),
                     e((string) ($item['period'] ?? '')),
                     e(number_format($unitPrice, 2, '.', '')),
-                    e(number_format(
-                        (float) ($item['price_adjustment'] ?? 0)
-                        + (float) ($item['boravisna_taksa'] ?? 0)
-                        + (float) ($item['osiguranje'] ?? 0)
-                        + (float) ($item['doplata_jednokrevetna_soba'] ?? 0)
-                        + (float) ($item['doplata_dodatno_sjediste'] ?? 0)
-                        + (float) ($item['doplata_sjediste_po_zelji'] ?? 0)
-                        - (float) ($item['discount'] ?? 0),
-                        2,
-                        '.',
-                        ''
-                    )),
+                    e(number_format($boravisnaTaksa, 2, '.', '')),
+                    e(number_format($osiguranje, 2, '.', '')),
+                    e(number_format($doplataJednokrevetnaSoba, 2, '.', '')),
+                    e(number_format($doplataDodatnoSjediste, 2, '.', '')),
+                    e(number_format($doplataSjedistePoZelji, 2, '.', '')),
+                    e(number_format($priceAdjustment, 2, '.', '')),
+                    e(number_format($discount, 2, '.', '')),
                     e((string) $quantity),
                     e(number_format($lineTotal, 2, '.', ''))
                 );
@@ -404,8 +445,14 @@ class ContractDataBuilder
                         <th>Br.</th>
                         <th>Usluga</th>
                         <th>Termin</th>
-                        <th>Cijena (KM)</th>
-                        <th>Dodatne stavke (KM)</th>
+                        <th>Osnovna cijena (KM)</th>
+                        <th>Boravišna taksa (KM)</th>
+                        <th>Osiguranje (KM)</th>
+                        <th>Doplata 1/1 soba (KM)</th>
+                        <th>Doplata dodatno sjedište (KM)</th>
+                        <th>Doplata sjedište po želji (KM)</th>
+                        <th>Dodatno na cijenu (KM)</th>
+                        <th>Popust (KM)</th>
                         <th>Količina</th>
                         <th>Iznos (KM)</th>
                     </tr>
@@ -413,7 +460,7 @@ class ContractDataBuilder
                 <tbody>%s</tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="6" class="text-right"><strong>UKUPNO</strong></td>
+                        <td colspan="12" class="text-right"><strong>UKUPNO</strong></td>
                         <td class="text-right"><strong>%s</strong></td>
                     </tr>
                 </tfoot>

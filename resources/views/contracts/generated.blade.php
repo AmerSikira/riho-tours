@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <title>{{ $document_title ?? ($contract['number'] ?? 'Ugovor') }}</title>
     <style>
-        @page { margin: 10mm 10mm 16mm; }
+        @page { margin: 10mm; }
         body { font-family: DejaVu Serif, serif; font-size: 11px; line-height: 1.32; color: #000; margin: 0; }
-        .page { padding: 0 0 16mm; }
+        .page { padding: 0; }
         h1, h2, h3 { margin: 0 0 6px 0; line-height: 1.2; color: #000; }
         p { margin: 0 0 4px 0; color: #000; }
         .document-header { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
@@ -31,8 +31,6 @@
         .travelers-list { margin: 4px 0; padding-left: 18px; }
         .travelers-list li { margin: 1px 0; }
         .page-break { page-break-before: always; break-before: page; }
-        .document-footer-wrap { position: fixed; left: 10mm; right: 10mm; bottom: 6mm; border-top: 1px solid #000; padding-top: 3px; text-align: center; }
-        .document-footer { display: inline-block; max-width: 100%; font-size: 9px; font-weight: 700; line-height: 1.2; text-align: center; color: #000; }
     </style>
 </head>
 <body>
@@ -74,23 +72,6 @@
         {!! $html !!}
     </div>
 
-    @php
-        $footerParts = array_values(array_filter([
-            trim((string) ($company['name'] ?? '')),
-            trim((string) ($company['address'] ?? '')),
-            trim((string) ($company['id_number'] ?? '')),
-            trim((string) ($company['vat_number'] ?? '')),
-            trim((string) ($company['registry_number'] ?? '')),
-            trim((string) ($company['bank_name'] ?? '')),
-            trim((string) ($company['representative_name'] ?? '')),
-            trim((string) ($company['iban'] ?? '')),
-            trim((string) ($company['swift'] ?? '')),
-        ], static fn (string $part): bool => $part !== ''));
-    @endphp
-
-    <div class="document-footer-wrap">
-        <div class="document-footer">{{ implode(' ; ', $footerParts) }}</div>
-    </div>
 </div>
 </body>
 </html>

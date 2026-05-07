@@ -209,6 +209,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('rezervacije/{rezervacija}/ugovor/pdf', [ContractsController::class, 'pdf'])
         ->middleware('permission:preuzimanje ugovora')
         ->name('rezervacije.ugovor.pdf');
+    Route::get('rezervacije/{rezervacija}/ugovor/payload', [ContractsController::class, 'payload'])
+        ->middleware('permission:preuzimanje ugovora')
+        ->name('rezervacije.ugovor.payload');
     Route::get('rezervacije/{rezervacija}/finansijski-dokumenti/{tip}/pregled', [ContractsController::class, 'financialDocumentPreview'])
         ->middleware('permission:preuzimanje ugovora')
         ->name('rezervacije.finansijski-dokumenti.pregled');

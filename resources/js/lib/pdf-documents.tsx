@@ -1,4 +1,5 @@
 import { Document, Font, Image, Page, StyleSheet, Text, View, pdf } from '@react-pdf/renderer';
+import Html from 'react-pdf-html';
 import type { ReactElement } from 'react';
 
 const PAGE_WIDTH_PT = 595.28; // A4 width in points
@@ -328,4 +329,39 @@ export const openPdfPreview = async (doc: ReactElement<any>, title: string): Pro
 
     previewWindow.document.title = title;
     window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+};
+
+export const downloadPdfFile = async (doc: ReactElement<any>, filename: string): Promise<void> => {
+    const blob = await pdf(doc).toBlob();
+    const blobUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = blobUrl;
+    anchor.download = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000);
+};
+
+export const ContractHtmlPdfDocument = ({
+    title,
+    html,
+    footerText,
+}: {
+    title: string;
+    html: string;
+    footerText: string;
+}) => {
+    const htmlWithStyle = `<style>body{font-family:Helvetica;font-size:11px;line-height:1.35;color:#000;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #000;padding:4px;}h1,h2,h3,p{margin:0 0 6px 0;}ul,ol{margin:0 0 6px 16px;} .text-right{text-align:right;} .text-center{text-align:center;} .strong{font-weight:bold;}</style>${html}`;
+
+    return (
+        <Document title={title}>
+            <Page size="A4" style={{ paddingTop: 28, paddingHorizontal: 28, paddingBottom: 44, fontFamily: 'NotoSans', fontSize: 11 }}>
+                <Html>{htmlWithStyle}</Html>
+                <View fixed style={{ position: 'absolute', left: 28, right: 28, bottom: 14, borderTopWidth: 1, borderTopColor: '#000', paddingTop: 3 }}>
+                    <Text style={{ fontSize: 9, lineHeight: 1.2, textAlign: 'center', fontWeight: 700 }}>{footerText}</Text>
+                </View>
+            </Page>
+        </Document>
+    );
 };

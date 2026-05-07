@@ -14,6 +14,7 @@ use App\Services\Contracts\ContractDataBuilder;
 use App\Services\Contracts\ContractGenerationService;
 use App\Services\Contracts\ContractTemplateRenderer;
 use Barryvdh\DomPDF\Facade\Pdf as DomPdf;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -324,6 +325,52 @@ class ContractsController extends Controller
             'contract' => $data['contract'] ?? [],
             'document_title' => 'Pregled predloška ugovora',
         ]);
+    }
+
+    /**
+     * Return rendered contract HTML payload for React-PDF rendering on frontend.
+     */
+    public function payload(
+        Request $request,
+        Reservation $rezervacija,
+        ContractGenerationService $generationService
+    ): JsonResponse {
+        try {
+            $template = $this->resolveTemplate($rezervacija);
+            if (! $template) {
+                return response()->json(['message' => 'Ne postoji aktivan predložak ugovora.'], 404);
+            }
+
+            $generated = $generationService->generate($rezervacija, $template, $request->user()?->id);
+            $company = data_get($generated->snapshot_data_json, 'data.company', []);
+            $contract = data_get($generated->snapshot_data_json, 'data.contract', []);
+            $footerParts = array_values(array_filter([
+                trim((string) data_get($company, 'name', '')),
+                trim((string) data_get($company, 'address', '')),
+                trim((string) data_get($company, 'id_number', '')),
+                trim((string) data_get($company, 'vat_number', '')),
+                trim((string) data_get($company, 'registry_number', '')),
+                trim((string) data_get($company, 'bank_name', '')),
+                trim((string) data_get($company, 'representative_name', '')),
+                trim((string) data_get($company, 'iban', '')),
+                trim((string) data_get($company, 'swift', '')),
+            ], static fn (string $part): bool => $part !== ''));
+
+            return response()->json([
+                'html' => (string) ($generated->rendered_html ?? ''),
+                'company' => $company,
+                'contract' => $contract,
+                'document_title' => (string) ($generated->contract_number ?: 'Ugovor'),
+                'footer_text' => implode(' ; ', $footerParts),
+            ]);
+        } catch (\Throwable $exception) {
+            Log::error('Failed to build contract payload.', [
+                'reservation_id' => (string) $rezervacija->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'Generisanje ugovora trenutno nije moguće.'], 500);
+        }
     }
 
     /**

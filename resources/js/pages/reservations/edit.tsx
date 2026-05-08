@@ -155,6 +155,7 @@ type Props = {
         logo_url: string | null;
         potpis_url: string | null;
         pecat_url: string | null;
+        viber_chat_uri?: string;
     };
     rezervacija: RezervacijaForm;
 };
@@ -803,35 +804,76 @@ export default function EditReservation({
     const primaryClientEmail = primaryClient?.email?.trim() ?? '';
     const normalizePhoneForMessaging = (phone: string): string =>
         phone.replaceAll(/[^\d+]/g, '');
+    const copyTextToClipboard = async (text: string): Promise<void> => {
+        if (navigator.clipboard?.writeText) {
+            try {
+                await navigator.clipboard.writeText(text);
+
+                return;
+            } catch {
+                // Fall through to the textarea copy path for restricted clipboard contexts.
+            }
+        }
+
+        const tempTextarea = document.createElement('textarea');
+        tempTextarea.value = text;
+        tempTextarea.setAttribute('readonly', '');
+        tempTextarea.style.position = 'absolute';
+        tempTextarea.style.left = '-9999px';
+        document.body.appendChild(tempTextarea);
+        tempTextarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempTextarea);
+    };
     const primaryClientPhone = normalizePhoneForMessaging(
         primaryClient?.broj_telefona ?? '',
     );
     const whatsappPhone = primaryClientPhone.replace(/^\+/, '');
+    const viberChatUri = settings.viber_chat_uri?.trim() ?? '';
+    const buildViberHref = (message: string): string => {
+        if (!message) {
+            return '';
+        }
+
+        const normalizedMessage = message.replaceAll('\n', '\r\n');
+
+        if (viberChatUri) {
+            return `viber://pa?chatURI=${encodeURIComponent(viberChatUri)}&text=${encodeURIComponent(normalizedMessage)}`;
+        }
+
+        if (!primaryClientPhone) {
+            return '';
+        }
+
+        return `viber://chat?number=${encodeURIComponent(primaryClientPhone)}`;
+    };
+    const openViberWithMessage = async (href: string, message: string): Promise<void> => {
+        if (!href) {
+            return;
+        }
+
+        if (!viberChatUri) {
+            try {
+                await copyTextToClipboard(message);
+                window.alert('Poruka za Viber je kopirana. Zalijepite je u otvoreni chat.');
+            } catch {
+                window.alert('Kopiranje Viber poruke nije uspjelo. Kopirajte tekst ručno.');
+            }
+        }
+
+        window.location.href = href;
+    };
     const contractShareText = `Poštovani,\n\nUgovor ${reservationDocumentNumber} možete pregledati na sljedećem linku:\n${reservationContractPdfUrl}`;
     const emailHref = primaryClientEmail
         ? `mailto:${encodeURIComponent(primaryClientEmail)}?subject=${encodeURIComponent(`Ugovor ${reservationDocumentNumber}`)}&body=${encodeURIComponent(contractShareText)}`
         : '';
-    const viberHref = primaryClientPhone
-        ? `viber://chat?number=${encodeURIComponent(primaryClientPhone)}&text=${encodeURIComponent(contractShareText)}`
-        : '';
+    const viberHref = buildViberHref(contractShareText);
     const whatsappHref = whatsappPhone
         ? `https://wa.me/${encodeURIComponent(whatsappPhone)}?text=${encodeURIComponent(contractShareText)}`
         : '';
     const copyContractLink = async () => {
         try {
-            if (navigator.clipboard?.writeText) {
-                await navigator.clipboard.writeText(reservationContractPdfUrl);
-            } else {
-                const tempTextarea = document.createElement('textarea');
-                tempTextarea.value = reservationContractPdfUrl;
-                tempTextarea.setAttribute('readonly', '');
-                tempTextarea.style.position = 'absolute';
-                tempTextarea.style.left = '-9999px';
-                document.body.appendChild(tempTextarea);
-                tempTextarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(tempTextarea);
-            }
+            await copyTextToClipboard(reservationContractPdfUrl);
 
             window.alert('Link ugovora je kopiran.');
         } catch {
@@ -869,9 +911,13 @@ export default function EditReservation({
                 const traveler = `${client.ime} ${client.prezime}`.trim() || 'Putnik';
                 const rows: Array<{ description: string; amount: number }> = [];
                 const push = (description: string, amount: number) => {
-                    if (Math.abs(amount) < 0.00001) return;
+                    if (Math.abs(amount) < 0.00001) {
+                        return;
+                    }
+
                     rows.push({ description, amount });
                 };
+
                 push(`${traveler} - ${pkg?.naziv ?? 'Paket'}`, parseMoney(pkg?.cijena));
                 push(`${traveler} - Boravišna taksa`, parseMoney(client.boravisna_taksa));
                 push(`${traveler} - Osiguranje`, parseMoney(client.osiguranje));
@@ -880,6 +926,7 @@ export default function EditReservation({
                 push(`${traveler} - Doplata za sjedište po želji`, parseMoney(client.doplata_sjediste_po_zelji));
                 push(`${traveler} - Dodatno na cijenu`, parseMoney(client.dodatno_na_cijenu));
                 push(`${traveler} - Popust`, -parseMoney(client.popust));
+
                 return rows;
             });
 
@@ -928,8 +975,8 @@ export default function EditReservation({
             ? `mailto:${encodeURIComponent(primaryClientEmail)}?subject=${encodeURIComponent(`${selectedFinancialDocument.label} ${reservationDocumentNumber}`)}&body=${encodeURIComponent(financialShareText)}`
             : '';
     const financialViberHref =
-        selectedFinancialDocument && primaryClientPhone
-            ? `viber://chat?number=${encodeURIComponent(primaryClientPhone)}&text=${encodeURIComponent(financialShareText)}`
+        selectedFinancialDocument && financialShareText
+            ? buildViberHref(financialShareText)
             : '';
     const financialWhatsappHref =
         selectedFinancialDocument && whatsappPhone
@@ -943,25 +990,14 @@ export default function EditReservation({
         }
 
         try {
-            if (navigator.clipboard?.writeText) {
-                await navigator.clipboard.writeText(selectedFinancialDocument.share_url);
-            } else {
-                const tempTextarea = document.createElement('textarea');
-                tempTextarea.value = selectedFinancialDocument.share_url;
-                tempTextarea.setAttribute('readonly', '');
-                tempTextarea.style.position = 'absolute';
-                tempTextarea.style.left = '-9999px';
-                document.body.appendChild(tempTextarea);
-                tempTextarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(tempTextarea);
-            }
+            await copyTextToClipboard(selectedFinancialDocument.share_url);
 
             window.alert('Link dokumenta je kopiran.');
         } catch {
             window.alert('Kopiranje linka nije uspjelo. Kopirajte ručno.');
         }
     };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Uredite rezervaciju" />
@@ -1025,15 +1061,15 @@ export default function EditReservation({
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             disabled={!financialViberHref}
-                                            asChild={Boolean(financialViberHref)}
+                                            onSelect={(event) => {
+                                                event.preventDefault();
+                                                void openViberWithMessage(
+                                                    financialViberHref,
+                                                    financialShareText,
+                                                );
+                                            }}
                                         >
-                                            {financialViberHref ? (
-                                                <a href={financialViberHref}>
-                                                    Pošalji putem Vibera
-                                                </a>
-                                            ) : (
-                                                <span>Pošalji putem Vibera</span>
-                                            )}
+                                            Pošalji putem Vibera
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             disabled={!financialWhatsappHref}
@@ -1107,17 +1143,15 @@ export default function EditReservation({
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                         disabled={!viberHref}
-                                        asChild={Boolean(viberHref)}
+                                        onSelect={(event) => {
+                                            event.preventDefault();
+                                            void openViberWithMessage(
+                                                viberHref,
+                                                contractShareText,
+                                            );
+                                        }}
                                     >
-                                        {viberHref ? (
-                                            <a href={viberHref}>
-                                                Pošalji putem Vibera
-                                            </a>
-                                        ) : (
-                                            <span>
-                                                Pošalji putem Vibera
-                                            </span>
-                                        )}
+                                        Pošalji putem Vibera
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                         disabled={!whatsappHref}

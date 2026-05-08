@@ -792,12 +792,14 @@ export default function EditReservation({
     };
 
     const reservationContractPdfPath = `/rezervacije/${rezervacija.id}/ugovor/pdf`;
-    const reservationContractPdfUrl =
+    const reservationContractPdfInternalUrl =
+        typeof window === 'undefined'
+            ? reservationContractPdfPath
+            : `${window.location.origin}${reservationContractPdfPath}`;
+    const reservationContractPdfShareUrl =
         rezervacija.contract_share_url && rezervacija.contract_share_url !== ''
             ? rezervacija.contract_share_url
-            : typeof window === 'undefined'
-                ? reservationContractPdfPath
-                : `${window.location.origin}${reservationContractPdfPath}`;
+            : reservationContractPdfInternalUrl;
     const currentYear = new Date().getFullYear();
     const reservationDocumentNumber = buildInvoiceNumber(rezervacija.order_num ?? 0, currentYear);
     const primaryClient = data.klijenti[0];
@@ -863,7 +865,7 @@ export default function EditReservation({
 
         window.location.href = href;
     };
-    const contractShareText = `Poštovani,\n\nUgovor ${reservationDocumentNumber} možete pregledati na sljedećem linku:\n${reservationContractPdfUrl}`;
+    const contractShareText = `Poštovani,\n\nUgovor ${reservationDocumentNumber} možete pregledati na sljedećem linku:\n${reservationContractPdfShareUrl}`;
     const emailHref = primaryClientEmail
         ? `mailto:${encodeURIComponent(primaryClientEmail)}?subject=${encodeURIComponent(`Ugovor ${reservationDocumentNumber}`)}&body=${encodeURIComponent(contractShareText)}`
         : '';
@@ -873,7 +875,7 @@ export default function EditReservation({
         : '';
     const copyContractLink = async () => {
         try {
-            await copyTextToClipboard(reservationContractPdfUrl);
+            await copyTextToClipboard(reservationContractPdfShareUrl);
 
             window.alert('Link ugovora je kopiran.');
         } catch {
@@ -881,10 +883,10 @@ export default function EditReservation({
         }
     };
     const openContractPdfLink = (download: boolean = false) => {
-        const separator = reservationContractPdfUrl.includes('?') ? '&' : '?';
+        const separator = reservationContractPdfInternalUrl.includes('?') ? '&' : '?';
         const targetUrl = download
-            ? `${reservationContractPdfUrl}${separator}download=1`
-            : reservationContractPdfUrl;
+            ? `${reservationContractPdfInternalUrl}${separator}download=1`
+            : reservationContractPdfInternalUrl;
 
         window.open(targetUrl, '_blank', 'noopener,noreferrer');
     };

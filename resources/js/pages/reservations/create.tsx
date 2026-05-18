@@ -154,6 +154,7 @@ export default function CreateReservation({
         status: 'na_cekanju',
         broj_fiskalnog_racuna: '',
         placanje: 'placeno',
+        nacin_uplate: 'cash',
         broj_rata: '',
         rate: [] as InstallmentFormData[],
         napomena: '',
@@ -1490,7 +1491,7 @@ export default function CreateReservation({
                                     />
                                 </div>
 
-                                <div className="grid gap-5 md:grid-cols-2">
+                                <div className="grid gap-5 md:grid-cols-3">
                                     <div className="grid gap-2">
                                         <Label htmlFor="placanje">Način plaćanja</Label>
                                         <select
@@ -1512,6 +1513,22 @@ export default function CreateReservation({
                                             </option>
                                         </select>
                                         <InputError message={errors.placanje} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="nacin_uplate">Kako je plaćeno</Label>
+                                        <select
+                                            id="nacin_uplate"
+                                            value={data.nacin_uplate}
+                                            onChange={(event) =>
+                                                setData('nacin_uplate', event.target.value as 'bank' | 'cash')
+                                            }
+                                            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                                        >
+                                            <option value="bank">Banka</option>
+                                            <option value="cash">Gotovina</option>
+                                        </select>
+                                        <InputError message={errors.nacin_uplate} />
                                     </div>
 
                                     {data.placanje === 'na_rate' && (

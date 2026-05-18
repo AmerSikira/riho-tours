@@ -15,9 +15,9 @@ use App\Services\Contracts\ContractGenerationService;
 use App\Services\Contracts\ContractTemplateRenderer;
 use Barryvdh\DomPDF\Facade\Pdf as DomPdf;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -161,7 +161,8 @@ class ContractsController extends Controller
             }
 
             $generated = $generationService->generate($rezervacija, $template, $request->user()?->id);
-            if (! $generated->rendered_pdf_path || ! Storage::disk('public')->exists($generated->rendered_pdf_path)) {
+            $generated = $generationService->regeneratePdfIfMissing($generated, $request->user()?->id);
+            if (! $generationService->hasRenderedPdf($generated)) {
                 return back()->with('error', 'PDF nije moguće preuzeti jer datoteka ne postoji.');
             }
 
@@ -196,7 +197,8 @@ class ContractsController extends Controller
             }
 
             $generated = $generationService->generate($rezervacija, $template, $request->user()?->id);
-            if (! $generated->rendered_pdf_path || ! Storage::disk('public')->exists($generated->rendered_pdf_path)) {
+            $generated = $generationService->regeneratePdfIfMissing($generated, $request->user()?->id);
+            if (! $generationService->hasRenderedPdf($generated)) {
                 return response()->view('contracts.generated', [
                     'html' => (string) ($generated->rendered_html ?? ''),
                     'company' => data_get($generated->snapshot_data_json, 'data.company', []),
@@ -238,7 +240,8 @@ class ContractsController extends Controller
             }
 
             $generated = $generationService->generate($rezervacija, $template, null);
-            if (! $generated->rendered_pdf_path || ! Storage::disk('public')->exists($generated->rendered_pdf_path)) {
+            $generated = $generationService->regeneratePdfIfMissing($generated);
+            if (! $generationService->hasRenderedPdf($generated)) {
                 return response()->view('contracts.generated', [
                     'html' => (string) ($generated->rendered_html ?? ''),
                     'company' => data_get($generated->snapshot_data_json, 'data.company', []),

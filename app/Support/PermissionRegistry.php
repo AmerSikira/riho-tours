@@ -82,6 +82,10 @@ final class PermissionRegistry
             'pregled izvještaja',
             'izvoz izvještaja',
 
+            // Cash register
+            'pregled blagajne',
+            'izvoz blagajne',
+
             // Company settings
             'pregled postavki kompanije',
             'uređivanje postavki kompanije',
@@ -138,6 +142,8 @@ final class PermissionRegistry
             'generisanje računa rata',
             'pregled izvještaja',
             'izvoz izvještaja',
+            'pregled blagajne',
+            'izvoz blagajne',
             'pregled ličnog profila',
             'uređivanje ličnog profila',
             'brisanje ličnog profila',

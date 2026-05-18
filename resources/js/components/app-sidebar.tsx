@@ -14,6 +14,7 @@ import {
     History,
     BarChart3,
     Globe,
+    Wallet,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -96,6 +97,12 @@ const mainNavItems: NavItem[] = [
         href: '/izvjestaji',
         icon: BarChart3,
         permission: 'pregled izvještaja',
+    },
+    {
+        title: 'Blagajna',
+        href: '/blagajna',
+        icon: Wallet,
+        permission: 'pregled blagajne',
     },
     {
         title: 'Ugovori',

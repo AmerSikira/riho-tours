@@ -30,12 +30,7 @@ class ContractGenerationService
         $renderedHtml = $this->renderer->render($template->html_template, $data, $computed);
 
         $now = Carbon::now();
-        $pdfPath = sprintf(
-            'contracts/%s/contract-%s-%s.pdf',
-            $reservation->id,
-            strtolower((string) $template->template_key),
-            $now->format('YmdHis')
-        );
+        $pdfPath = $this->buildPdfPath((string) $reservation->id, (string) $template->template_key, $now);
 
         $pdfWasRendered = $this->renderPdf($pdfPath, [
             'html' => $renderedHtml,
@@ -65,6 +60,45 @@ class ContractGenerationService
             'created_by' => $userId,
             'updated_by' => $userId,
         ]);
+    }
+
+    /**
+     * Re-render a stored contract snapshot when the database row points to a missing PDF.
+     */
+    public function regeneratePdfIfMissing(GeneratedContract $contract, ?string $userId = null): GeneratedContract
+    {
+        if ($this->hasRenderedPdf($contract)) {
+            return $contract;
+        }
+
+        $now = Carbon::now();
+        $pdfPath = $this->buildPdfPath(
+            (string) $contract->reservation_id,
+            $this->snapshotTemplateKey($contract),
+            $now
+        );
+
+        $pdfWasRendered = $this->renderPdf($pdfPath, $this->snapshotViewData($contract));
+        if (! $pdfWasRendered) {
+            return $contract;
+        }
+
+        $contract->forceFill([
+            'rendered_pdf_path' => $pdfPath,
+            'updated_by' => $userId,
+        ])->save();
+
+        return $contract->refresh();
+    }
+
+    /**
+     * Determine whether the generated contract still has a readable stored PDF.
+     */
+    public function hasRenderedPdf(GeneratedContract $contract): bool
+    {
+        $path = trim((string) $contract->rendered_pdf_path);
+
+        return $path !== '' && Storage::disk('public')->exists($path);
     }
 
     /**
@@ -109,5 +143,43 @@ class ContractGenerationService
         }
 
         return false;
+    }
+
+    /**
+     * Build the public disk path for a generated contract PDF.
+     */
+    private function buildPdfPath(string $reservationId, string $templateKey, Carbon $timestamp): string
+    {
+        return sprintf(
+            'contracts/%s/contract-%s-%s.pdf',
+            $reservationId,
+            strtolower($templateKey),
+            $timestamp->format('YmdHis')
+        );
+    }
+
+    /**
+     * Resolve the template key stored in a generated contract snapshot.
+     */
+    private function snapshotTemplateKey(GeneratedContract $contract): string
+    {
+        $templateKey = trim((string) data_get($contract->snapshot_data_json, 'template.template_key', 'contract'));
+
+        return $templateKey !== '' ? $templateKey : 'contract';
+    }
+
+    /**
+     * Build PDF view data from an existing generated contract snapshot.
+     *
+     * @return array<string, mixed>
+     */
+    private function snapshotViewData(GeneratedContract $contract): array
+    {
+        return [
+            'html' => (string) ($contract->rendered_html ?? ''),
+            'company' => data_get($contract->snapshot_data_json, 'data.company', []),
+            'contract' => data_get($contract->snapshot_data_json, 'data.contract', []),
+            'document_title' => (string) ($contract->contract_number ?: 'Ugovor'),
+        ];
     }
 }

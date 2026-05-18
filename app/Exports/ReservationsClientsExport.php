@@ -36,6 +36,7 @@ class ReservationsClientsExport implements FromCollection, ShouldAutoSize, WithH
             'Telefon',
             'Datum rođenja',
             'Broj dokumenta',
+            'Package',
             'Broj rezervacije',
         ];
     }

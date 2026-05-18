@@ -3,6 +3,7 @@
 use App\Http\Controllers\Arrangements\ArrangementPackagesController;
 use App\Http\Controllers\Arrangements\ArrangementsController;
 use App\Http\Controllers\Arrangements\PackagesController;
+use App\Http\Controllers\Blagajna\BlagajnaController;
 use App\Http\Controllers\Changes\ChangesController;
 use App\Http\Controllers\Clients\ClientsController;
 use App\Http\Controllers\Contracts\ContractsController;
@@ -40,6 +41,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('izvjestaji/izvoz', [ReportsController::class, 'export'])
         ->middleware('permission:izvoz izvještaja')
         ->name('izvjestaji.export');
+    Route::get('blagajna', [BlagajnaController::class, 'index'])
+        ->middleware('permission:pregled blagajne')
+        ->name('blagajna.index');
+    Route::get('blagajna/aranzmani/pretraga', [BlagajnaController::class, 'searchArrangements'])
+        ->middleware('permission:pregled blagajne')
+        ->name('blagajna.aranzmani.search');
+    Route::get('blagajna/izvoz/csv', [BlagajnaController::class, 'export'])
+        ->middleware('permission:izvoz blagajne')
+        ->name('blagajna.export');
     Route::get('aranzmani', [ArrangementsController::class, 'index'])
         ->middleware('permission:pregled aranžmana')
         ->name('aranzmani.index');

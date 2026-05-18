@@ -268,6 +268,7 @@ class ReservationsController extends Controller
                         $this->buildExportRowFromReservation(
                             reservation: $reservation,
                             client: $reservation->client,
+                            reservationClient: null,
                         ),
                     ]);
                 }
@@ -276,6 +277,7 @@ class ReservationsController extends Controller
                     return $this->buildExportRowFromReservation(
                         reservation: $reservation,
                         client: $item->client,
+                        reservationClient: $item,
                     );
                 });
             })
@@ -288,6 +290,7 @@ class ReservationsController extends Controller
                     'telefon' => (string) ($row['telefon'] ?? ''),
                     'datum_rodjenja' => (string) ($row['datum_rodjenja'] ?? ''),
                     'broj_dokumenta' => (string) ($row['broj_dokumenta'] ?? ''),
+                    'package' => (string) ($row['package'] ?? ''),
                     'broj_rezervacije' => (string) ($row['broj_rezervacije'] ?? ''),
                 ];
             })
@@ -301,6 +304,7 @@ class ReservationsController extends Controller
     private function buildExportRowFromReservation(
         Reservation $reservation,
         ?Client $client,
+        ?ReservationClient $reservationClient,
     ): array {
         return [
             'ime_i_prezime' => trim((string) ($client?->ime ?? '').' '.(string) ($client?->prezime ?? '')),
@@ -308,6 +312,7 @@ class ReservationsController extends Controller
             'telefon' => (string) ($client?->broj_telefona ?? ''),
             'datum_rodjenja' => $client?->datum_rodjenja?->format('d.m.Y') ?? '',
             'broj_dokumenta' => (string) ($client?->broj_dokumenta ?? ''),
+            'package' => (string) ($reservationClient?->package?->naziv ?? ''),
             'broj_rezervacije' => (string) ($reservation->order_num ?? ''),
         ];
     }
@@ -344,6 +349,7 @@ class ReservationsController extends Controller
             'status' => $validatedData['status'],
             'broj_fiskalnog_racuna' => $validatedData['broj_fiskalnog_racuna'] ?? null,
             'placanje' => $validatedData['placanje'],
+            'nacin_uplate' => $validatedData['nacin_uplate'],
             'broj_rata' => $validatedData['placanje'] === 'na_rate'
                 ? (int) $validatedData['broj_rata']
                 : null,
@@ -415,6 +421,7 @@ class ReservationsController extends Controller
                 'status' => $rezervacija->status,
                 'broj_fiskalnog_racuna' => $rezervacija->broj_fiskalnog_racuna ?? '',
                 'placanje' => $rezervacija->placanje ?? 'placeno',
+                'nacin_uplate' => $rezervacija->nacin_uplate ?? 'cash',
                 'broj_rata' => $rezervacija->broj_rata,
                 'rate' => $this->rateDatesForForm($rezervacija->broj_rata, $rezervacija->rate),
                 'napomena' => $rezervacija->napomena ?? '',
@@ -438,6 +445,7 @@ class ReservationsController extends Controller
             'status' => $validatedData['status'],
             'broj_fiskalnog_racuna' => $validatedData['broj_fiskalnog_racuna'] ?? null,
             'placanje' => $validatedData['placanje'],
+            'nacin_uplate' => $validatedData['nacin_uplate'],
             'broj_rata' => $validatedData['placanje'] === 'na_rate'
                 ? (int) $validatedData['broj_rata']
                 : null,

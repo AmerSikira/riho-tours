@@ -74,6 +74,7 @@ type RezervacijaForm = {
     status: string;
     broj_fiskalnog_racuna: string;
     placanje: 'placeno' | 'na_rate' | 'na_odgodeno';
+    nacin_uplate: 'bank' | 'cash';
     broj_rata: number | null;
     rate: Array<{
         datum_predracuna?: string;
@@ -243,6 +244,7 @@ export default function EditReservation({
         status: rezervacija.status,
         broj_fiskalnog_racuna: rezervacija.broj_fiskalnog_racuna,
         placanje: rezervacija.placanje,
+        nacin_uplate: rezervacija.nacin_uplate ?? 'cash',
         broj_rata:
             rezervacija.broj_rata === null ? '' : String(rezervacija.broj_rata),
         rate: rezervacija.rate.map((rata) => ({
@@ -1863,7 +1865,7 @@ export default function EditReservation({
                                     />
                                 </div>
 
-                                <div className="grid gap-5 md:grid-cols-2">
+                                <div className="grid gap-5 md:grid-cols-3">
                                     <div className="grid gap-2">
                                         <Label htmlFor="placanje">Način plaćanja</Label>
                                         <select
@@ -1885,6 +1887,22 @@ export default function EditReservation({
                                             </option>
                                         </select>
                                         <InputError message={errors.placanje} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="nacin_uplate">Kako je plaćeno</Label>
+                                        <select
+                                            id="nacin_uplate"
+                                            value={data.nacin_uplate}
+                                            onChange={(event) =>
+                                                setData('nacin_uplate', event.target.value as 'bank' | 'cash')
+                                            }
+                                            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                                        >
+                                            <option value="bank">Banka</option>
+                                            <option value="cash">Gotovina</option>
+                                        </select>
+                                        <InputError message={errors.nacin_uplate} />
                                     </div>
 
                                     {data.placanje === 'na_rate' && (

@@ -300,6 +300,7 @@ class WebReservationsController extends Controller
                 'status' => 'na_cekanju',
                 'broj_fiskalnog_racuna' => null,
                 'placanje' => 'placeno',
+                'nacin_uplate' => 'cash',
                 'broj_rata' => null,
                 'rate' => null,
                 'napomena' => trim(implode("\n", $noteParts)) ?: null,

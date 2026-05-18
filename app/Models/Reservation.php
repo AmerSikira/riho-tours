@@ -40,6 +40,7 @@ class Reservation extends Model
         'status',
         'broj_fiskalnog_racuna',
         'placanje',
+        'nacin_uplate',
         'broj_rata',
         'rate',
         'napomena',

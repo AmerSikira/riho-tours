@@ -14,6 +14,7 @@ type Uplata = {
     uplatio: string;
     datum: string;
     za_sta: string;
+    iznos: string;
     nacin_uplate: string;
     nacin_uplate_label: string;
 };
@@ -237,13 +238,14 @@ export default function BlagajnaIndex({ uplate, filters, selected_aranzman: sele
                                 <th className="px-4 py-3 text-left font-medium">Ko je uplatio</th>
                                 <th className="px-4 py-3 text-left font-medium">Kada</th>
                                 <th className="px-4 py-3 text-left font-medium">Za šta</th>
+                                <th className="px-4 py-3 text-left font-medium">Iznos</th>
                                 <th className="px-4 py-3 text-left font-medium">Način uplate</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
                             {uplate.data.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
+                                    <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
                                         Nema uplata za zadane filtere.
                                     </td>
                                 </tr>
@@ -253,6 +255,7 @@ export default function BlagajnaIndex({ uplate, filters, selected_aranzman: sele
                                     <td className="px-4 py-3">{uplata.uplatio || '-'}</td>
                                     <td className="px-4 py-3">{formatDateDisplay(uplata.datum)}</td>
                                     <td className="px-4 py-3">{uplata.za_sta || '-'}</td>
+                                    <td className="px-4 py-3">{uplata.iznos} KM</td>
                                     <td className="px-4 py-3">{uplata.nacin_uplate_label}</td>
                                 </tr>
                             ))}

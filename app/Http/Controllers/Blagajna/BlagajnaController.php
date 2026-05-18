@@ -109,7 +109,7 @@ class BlagajnaController extends Controller
                 return;
             }
 
-            fputcsv($stream, ['Ko je uplatio', 'Datum', 'Aranžman', 'Nacin uplate']);
+            fputcsv($stream, ['Ko je uplatio', 'Datum', 'Aranžman', 'Iznos', 'Nacin uplate']);
 
             /** @var Reservation $rezervacija */
             foreach ($rows as $rezervacija) {
@@ -119,6 +119,7 @@ class BlagajnaController extends Controller
                     $item['uplatio'],
                     $item['datum'],
                     $item['za_sta'],
+                    $item['iznos'],
                     $item['nacin_uplate_label'],
                 ]);
             }
@@ -138,6 +139,7 @@ class BlagajnaController extends Controller
             ->with([
                 'arrangement:id,sifra,naziv_putovanja,destinacija,datum_polaska,datum_povratka',
                 'reservationClients.client:id,ime,prezime',
+                'reservationClients.package:id,cijena',
                 'client:id,ime,prezime',
             ])
             ->whereHas('arrangement', function ($query) use ($aranzmanId) {
@@ -184,9 +186,33 @@ class BlagajnaController extends Controller
             'uplatio' => $this->payerLabel($rezervacija),
             'datum' => $rezervacija->created_at?->toDateString() ?? '',
             'za_sta' => trim((string) ($rezervacija->arrangement?->sifra ?? '').' - '.(string) ($rezervacija->arrangement?->naziv_putovanja ?? '')),
+            'iznos' => number_format($this->reservationTotalAmount($rezervacija), 2, '.', ''),
             'nacin_uplate' => (string) $rezervacija->nacin_uplate,
             'nacin_uplate_label' => $rezervacija->nacin_uplate === 'bank' ? 'Banka' : 'Gotovina',
         ];
+    }
+
+    /**
+     * Calculate reservation total amount from packages, add-ons and discounts.
+     */
+    private function reservationTotalAmount(Reservation $rezervacija): float
+    {
+        $packageTotal = 0.0;
+        $addOnsTotal = 0.0;
+        $discountTotal = 0.0;
+
+        foreach ($rezervacija->reservationClients as $stavka) {
+            $packageTotal += (float) ($stavka->package?->cijena ?? 0);
+            $addOnsTotal += (float) ($stavka->dodatno_na_cijenu ?? 0);
+            $addOnsTotal += (float) ($stavka->boravisna_taksa ?? 0);
+            $addOnsTotal += (float) ($stavka->osiguranje ?? 0);
+            $addOnsTotal += (float) ($stavka->doplata_jednokrevetna_soba ?? 0);
+            $addOnsTotal += (float) ($stavka->doplata_dodatno_sjediste ?? 0);
+            $addOnsTotal += (float) ($stavka->doplata_sjediste_po_zelji ?? 0);
+            $discountTotal += (float) ($stavka->popust ?? 0);
+        }
+
+        return $packageTotal + $addOnsTotal - $discountTotal;
     }
 
     /**

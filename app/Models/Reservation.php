@@ -3,14 +3,16 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class Reservation extends Model
 {
@@ -32,6 +34,9 @@ class Reservation extends Model
         'order_num',
         'aranzman_id',
         'contract_template_id',
+        'contract_pdf_path',
+        'contract_expires_at',
+        'contract_access_signature_hash',
         'klijent_id',
         'ime_prezime',
         'email',
@@ -60,6 +65,7 @@ class Reservation extends Model
             'broj_putnika' => 'integer',
             'broj_rata' => 'integer',
             'rate' => 'array',
+            'contract_expires_at' => 'datetime',
         ];
     }
 
@@ -69,12 +75,28 @@ class Reservation extends Model
     protected static function booted(): void
     {
         static::creating(function (self $reservation): void {
-            if ($reservation->order_num !== null) {
-                return;
+            if (! $reservation->getKey()) {
+                $reservation->{$reservation->getKeyName()} = (string) Str::uuid();
             }
 
-            $reservation->order_num = (int) DB::table('reservation_order_sequences')
-                ->insertGetId([]);
+            if ($reservation->order_num === null) {
+                $reservation->order_num = (int) DB::table('reservation_order_sequences')
+                    ->insertGetId([]);
+            }
+
+            if ($reservation->contract_access_signature_hash === null) {
+                $createdAt = $reservation->created_at instanceof CarbonInterface
+                    ? $reservation->created_at
+                    : Carbon::now();
+
+                if ($reservation->created_at === null) {
+                    $reservation->created_at = $createdAt;
+                }
+
+                $reservation->contract_access_signature_hash = self::hashContractAccessSignature(
+                    self::contractAccessSignatureFor((string) $reservation->getKey(), $createdAt)
+                );
+            }
         });
     }
 
@@ -111,14 +133,6 @@ class Reservation extends Model
     }
 
     /**
-     * All generated contracts for this reservation.
-     */
-    public function generatedContracts(): HasMany
-    {
-        return $this->hasMany(GeneratedContract::class, 'reservation_id');
-    }
-
-    /**
      * Build a formatted document number for invoices and contracts.
      */
     public function documentNumber(?CarbonInterface $date = null): string
@@ -127,5 +141,37 @@ class Reservation extends Model
         $orderNumber = $this->order_num ?? 0;
 
         return sprintf('WEB-%d/%s', $orderNumber, $year);
+    }
+
+    /**
+     * Build the stable raw contract access signature for this reservation.
+     */
+    public function contractAccessSignature(): string
+    {
+        $createdAt = $this->created_at instanceof CarbonInterface
+            ? $this->created_at
+            : Carbon::parse($this->created_at);
+
+        return self::contractAccessSignatureFor((string) $this->getKey(), $createdAt);
+    }
+
+    /**
+     * Build a stable contract access signature from reservation identity.
+     */
+    public static function contractAccessSignatureFor(string $reservationId, CarbonInterface $createdAt): string
+    {
+        return hash_hmac(
+            'sha256',
+            sprintf('%s|%s', $reservationId, $createdAt->toDateTimeString()),
+            (string) config('app.key')
+        );
+    }
+
+    /**
+     * Hash the raw contract access signature before storage.
+     */
+    public static function hashContractAccessSignature(string $signature): string
+    {
+        return hash('sha256', $signature);
     }
 }

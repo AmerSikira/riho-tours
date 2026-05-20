@@ -84,7 +84,6 @@ export default function ContractTemplateEdit({ template, status, error }: Props)
                     'Content-Type': 'application/json',
                     Accept: 'text/html,application/json',
                     'X-CSRF-TOKEN': csrfToken,
-                    'X-XSRF-TOKEN': csrfTokenFromCookie,
                     'X-Requested-With': 'XMLHttpRequest',
                 },
                 body: JSON.stringify({

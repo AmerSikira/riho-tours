@@ -74,14 +74,6 @@ class ContractTemplate extends Model
     }
 
     /**
-     * Contracts generated from this template.
-     */
-    public function generatedContracts(): HasMany
-    {
-        return $this->hasMany(GeneratedContract::class, 'contract_template_id');
-    }
-
-    /**
      * Reservations currently linked to this template.
      */
     public function reservations(): HasMany

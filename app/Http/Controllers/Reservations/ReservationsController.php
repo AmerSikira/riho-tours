@@ -11,6 +11,7 @@ use App\Models\ContractTemplate;
 use App\Models\Reservation;
 use App\Models\ReservationClient;
 use App\Models\Setting;
+use App\Services\Contracts\ContractCopyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -407,14 +408,6 @@ class ReservationsController extends Controller
             'rezervacija' => [
                 'id' => $rezervacija->id,
                 'order_num' => $rezervacija->order_num,
-                'contract_share_url' => $this->buildPublicContractShareUrl(
-                    URL::temporarySignedRoute(
-                        'javni.ugovor.pdf',
-                        now()->addDays(30),
-                        ['rezervacija' => $rezervacija->id],
-                        absolute: false
-                    )
-                ),
                 'financial_document_links' => $this->buildFinancialDocumentLinks($rezervacija),
                 'aranzman_id' => $rezervacija->aranzman_id,
                 'contract_template_id' => $rezervacija->contract_template_id,
@@ -433,8 +426,11 @@ class ReservationsController extends Controller
     /**
      * Update selected reservation.
      */
-    public function update(StoreReservationRequest $request, Reservation $rezervacija): RedirectResponse
-    {
+    public function update(
+        StoreReservationRequest $request,
+        Reservation $rezervacija,
+        ContractCopyService $contractCopyService
+    ): RedirectResponse {
         $validatedData = $request->validated();
         $klijentiData = $validatedData['klijenti'];
 
@@ -455,6 +451,7 @@ class ReservationsController extends Controller
         ]);
 
         $this->syncClientsForReservation($request, $rezervacija, $klijentiData);
+        $contractCopyService->invalidate($rezervacija->refresh());
 
         return to_route('rezervacije.index')->with('status', 'Rezervacija je uspješno ažurirana.');
     }
@@ -997,7 +994,7 @@ class ReservationsController extends Controller
 
         if (! $klijent) {
             $klijent = $documentNumber === null
-                ? new Client()
+                ? new Client
                 : Client::query()->firstOrNew([
                     'broj_dokumenta' => $documentNumber,
                 ]);

@@ -19,7 +19,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login')->name('home');
 Route::get('javni/ugovor/{rezervacija}/pdf', [ContractsController::class, 'publicPdf'])
-    ->middleware('signed:relative')
     ->name('javni.ugovor.pdf');
 Route::get('javni/finansijski-dokumenti/{rezervacija}/{tip}/pregled', [ContractsController::class, 'publicFinancialDocumentPreview'])
     ->middleware('signed:relative')
@@ -231,6 +230,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('rezervacije/{rezervacija}/ugovor/generisi', [ContractsController::class, 'generate'])
         ->middleware('permission:generisanje ugovora')
         ->name('rezervacije.ugovor.generisi');
+    Route::post('rezervacije/{rezervacija}/ugovor/podijeli', [ContractsController::class, 'share'])
+        ->middleware('permission:slanje ugovora')
+        ->name('rezervacije.ugovor.podijeli');
 
     Route::get('ugovori/predlosci', [ContractsController::class, 'templatesIndex'])
         ->middleware('permission:pregled ugovora')

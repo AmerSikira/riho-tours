@@ -61,9 +61,8 @@ type ClientFormData = {
 };
 
 type RezervacijaForm = {
-    id: number;
+    id: string;
     order_num: number | null;
-    contract_share_url: string;
     financial_document_links: Array<{
         key: string;
         label: string;
@@ -133,6 +132,12 @@ type InstallmentFormData = {
 
 type PaymentOption = 'placeno' | 'na_rate' | 'na_odgodeno';
 type InvoiceDocumentType = 'racun' | 'predracun';
+
+type ContractShareResponse = {
+    url?: string;
+    message?: string;
+    errors?: Record<string, string[]>;
+};
 
 type Props = {
     aranzmani: ArrangementOption[];
@@ -280,6 +285,7 @@ export default function EditReservation({
     } | null>(null);
     const [selectedFinancialDocumentKey, setSelectedFinancialDocumentKey] =
         useState<string>(() => rezervacija.financial_document_links[0]?.key ?? 'predracun');
+    const [isPreparingContractShare, setIsPreparingContractShare] = useState(false);
     const suggestionRequests = useRef<Record<number, AbortController | null>>(
         {},
     );
@@ -798,10 +804,6 @@ export default function EditReservation({
         typeof window === 'undefined'
             ? reservationContractPdfPath
             : `${window.location.origin}${reservationContractPdfPath}`;
-    const reservationContractPdfShareUrl =
-        rezervacija.contract_share_url && rezervacija.contract_share_url !== ''
-            ? rezervacija.contract_share_url
-            : reservationContractPdfInternalUrl;
     const currentYear = new Date().getFullYear();
     const reservationDocumentNumber = buildInvoiceNumber(rezervacija.order_num ?? 0, currentYear);
     const primaryClient = data.klijenti[0];
@@ -867,21 +869,172 @@ export default function EditReservation({
 
         window.location.href = href;
     };
-    const contractShareText = `Poštovani,\n\nUgovor ${reservationDocumentNumber} možete pregledati na sljedećem linku:\n${reservationContractPdfShareUrl}`;
-    const emailHref = primaryClientEmail
-        ? `mailto:${encodeURIComponent(primaryClientEmail)}?subject=${encodeURIComponent(`Ugovor ${reservationDocumentNumber}`)}&body=${encodeURIComponent(contractShareText)}`
-        : '';
-    const viberHref = buildViberHref(contractShareText);
-    const whatsappHref = whatsappPhone
-        ? `https://wa.me/${encodeURIComponent(whatsappPhone)}?text=${encodeURIComponent(contractShareText)}`
-        : '';
+    const canSendContractEmail = primaryClientEmail !== '';
+    const canSendContractViber = viberChatUri !== '' || primaryClientPhone !== '';
+    const canSendContractWhatsapp = whatsappPhone !== '';
+    const buildContractShareText = (shareUrl: string): string =>
+        `Poštovani,\n\nUgovor ${reservationDocumentNumber} možete pregledati na sljedećem linku:\n${shareUrl}`;
+    const resolveCsrfHeaders = (): Record<string, string> => {
+        const csrfTokenFromMeta =
+            document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute('content') ?? '';
+        const xsrfCookie = document.cookie
+            .split('; ')
+            .find((row) => row.startsWith('XSRF-TOKEN='));
+        const csrfTokenFromCookie = xsrfCookie
+            ? decodeURIComponent(xsrfCookie.split('=').slice(1).join('='))
+            : '';
+        const csrfToken = csrfTokenFromMeta || csrfTokenFromCookie;
+
+        return {
+            'X-CSRF-TOKEN': csrfToken,
+        };
+    };
+    const responseErrorMessage = async (
+        response: Response,
+        fallback: string,
+    ): Promise<string> => {
+        const contentType = response.headers.get('content-type') ?? '';
+
+        if (!contentType.includes('application/json')) {
+            return `${fallback} (HTTP ${response.status})`;
+        }
+
+        const payload = (await response.json()) as ContractShareResponse;
+        const firstError = Object.values(payload.errors ?? {})
+            .flat()
+            .find((value) => value && value.trim() !== '');
+
+        return firstError ?? payload.message ?? fallback;
+    };
+    const prepareContractShare = async (): Promise<string> => {
+        setIsPreparingContractShare(true);
+
+        try {
+            const response = await fetch(
+                `/rezervacije/${rezervacija.id}/ugovor/podijeli`,
+                {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        ...resolveCsrfHeaders(),
+                    },
+                },
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    await responseErrorMessage(
+                        response,
+                        'Slanje ugovora trenutno nije moguće.',
+                    ),
+                );
+            }
+
+            const payload = (await response.json()) as ContractShareResponse;
+
+            if (!payload.url) {
+                throw new Error('Server nije vratio link ugovora.');
+            }
+
+            return payload.url;
+        } finally {
+            setIsPreparingContractShare(false);
+        }
+    };
+    const openSharedContractPdfLink = async () => {
+        const previewWindow = window.open('', '_blank');
+
+        if (!previewWindow) {
+            return;
+        }
+
+        previewWindow.opener = null;
+
+        try {
+            previewWindow.location.href = await prepareContractShare();
+        } catch (error) {
+            previewWindow.close();
+            window.alert(
+                error instanceof Error
+                    ? error.message
+                    : 'Slanje ugovora trenutno nije moguće.',
+            );
+        }
+    };
+    const emailContractLink = async () => {
+        if (!canSendContractEmail) {
+            return;
+        }
+
+        try {
+            const shareUrl = await prepareContractShare();
+            const contractShareText = buildContractShareText(shareUrl);
+
+            window.location.href = `mailto:${encodeURIComponent(primaryClientEmail)}?subject=${encodeURIComponent(`Ugovor ${reservationDocumentNumber}`)}&body=${encodeURIComponent(contractShareText)}`;
+        } catch (error) {
+            window.alert(
+                error instanceof Error
+                    ? error.message
+                    : 'Slanje ugovora putem emaila trenutno nije moguće.',
+            );
+        }
+    };
+    const viberContractLink = async () => {
+        if (!canSendContractViber) {
+            return;
+        }
+
+        try {
+            const shareUrl = await prepareContractShare();
+            const contractShareText = buildContractShareText(shareUrl);
+            const viberHref = buildViberHref(contractShareText);
+
+            await openViberWithMessage(viberHref, contractShareText);
+        } catch (error) {
+            window.alert(
+                error instanceof Error
+                    ? error.message
+                    : 'Slanje ugovora putem Vibera trenutno nije moguće.',
+            );
+        }
+    };
+    const whatsappContractLink = async () => {
+        if (!canSendContractWhatsapp) {
+            return;
+        }
+
+        try {
+            const shareUrl = await prepareContractShare();
+            const contractShareText = buildContractShareText(shareUrl);
+
+            window.open(
+                `https://wa.me/${encodeURIComponent(whatsappPhone)}?text=${encodeURIComponent(contractShareText)}`,
+                '_blank',
+                'noopener,noreferrer',
+            );
+        } catch (error) {
+            window.alert(
+                error instanceof Error
+                    ? error.message
+                    : 'Slanje ugovora putem WhatsAppa trenutno nije moguće.',
+            );
+        }
+    };
     const copyContractLink = async () => {
         try {
-            await copyTextToClipboard(reservationContractPdfShareUrl);
+            await copyTextToClipboard(await prepareContractShare());
 
             window.alert('Link ugovora je kopiran.');
-        } catch {
-            window.alert('Kopiranje linka nije uspjelo. Kopirajte ručno.');
+        } catch (error) {
+            window.alert(
+                error instanceof Error
+                    ? error.message
+                    : 'Kopiranje linka nije uspjelo. Kopirajte ručno.',
+            );
         }
     };
     const openContractPdfLink = (download: boolean = false) => {
@@ -1115,67 +1268,53 @@ export default function EditReservation({
                             <Button
                                 type="button"
                                 className="rounded-r-none"
+                                disabled={isPreparingContractShare}
                                 onClick={() => {
-                                    openContractPdfLink(false);
+                                    void openSharedContractPdfLink();
                                 }}
                             >
-                                Pošalji ugovor
+                                {isPreparingContractShare ? 'Priprema...' : 'Pošalji ugovor'}
                             </Button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button
                                         type="button"
                                         className="rounded-l-none border-l border-primary-foreground/30 px-2"
+                                        disabled={isPreparingContractShare}
                                     >
                                         <ChevronDown className="size-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuItem
-                                        disabled={!emailHref}
-                                        asChild={Boolean(emailHref)}
-                                    >
-                                        {emailHref ? (
-                                            <a href={emailHref}>
-                                                Pošalji putem emaila
-                                            </a>
-                                        ) : (
-                                            <span>
-                                                Pošalji putem emaila
-                                            </span>
-                                        )}
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                        disabled={!viberHref}
+                                        disabled={!canSendContractEmail || isPreparingContractShare}
                                         onSelect={(event) => {
                                             event.preventDefault();
-                                            void openViberWithMessage(
-                                                viberHref,
-                                                contractShareText,
-                                            );
+                                            void emailContractLink();
+                                        }}
+                                    >
+                                        Pošalji putem emaila
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        disabled={!canSendContractViber || isPreparingContractShare}
+                                        onSelect={(event) => {
+                                            event.preventDefault();
+                                            void viberContractLink();
                                         }}
                                     >
                                         Pošalji putem Vibera
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
-                                        disabled={!whatsappHref}
-                                        asChild={Boolean(whatsappHref)}
+                                        disabled={!canSendContractWhatsapp || isPreparingContractShare}
+                                        onSelect={(event) => {
+                                            event.preventDefault();
+                                            void whatsappContractLink();
+                                        }}
                                     >
-                                        {whatsappHref ? (
-                                            <a
-                                                href={whatsappHref}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                            >
-                                                Pošalji putem WhatsAppa
-                                            </a>
-                                        ) : (
-                                            <span>
-                                                Pošalji putem WhatsAppa
-                                            </span>
-                                        )}
+                                        Pošalji putem WhatsAppa
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
+                                        disabled={isPreparingContractShare}
                                         onSelect={(event) => {
                                             event.preventDefault();
                                             void copyContractLink();

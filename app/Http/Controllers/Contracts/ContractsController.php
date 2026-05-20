@@ -10,7 +10,9 @@ use App\Models\ContractTemplate;
 use App\Models\Reservation;
 use App\Models\ReservationClient;
 use App\Models\Setting;
+use App\Services\Contracts\ContractCopyService;
 use App\Services\Contracts\ContractDataBuilder;
+use App\Services\Contracts\ContractDocument;
 use App\Services\Contracts\ContractGenerationService;
 use App\Services\Contracts\ContractTemplateRenderer;
 use Barryvdh\DomPDF\Facade\Pdf as DomPdf;
@@ -25,7 +27,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 
 class ContractsController extends Controller
 {
@@ -149,7 +151,7 @@ class ContractsController extends Controller
         Request $request,
         Reservation $rezervacija,
         ContractGenerationService $generationService
-    ): RedirectResponse|StreamedResponse {
+    ): RedirectResponse|HttpResponse {
         try {
             $validated = $request->validate([
                 'contract_template_id' => ['nullable', 'exists:contract_templates,id'],
@@ -160,18 +162,14 @@ class ContractsController extends Controller
                 return back()->with('error', 'Ne postoji aktivan predložak ugovora za tip aranžmana.');
             }
 
-            $generated = $generationService->generate($rezervacija, $template, $request->user()?->id);
-            $generated = $generationService->regeneratePdfIfMissing($generated, $request->user()?->id);
-            if (! $generationService->hasRenderedPdf($generated)) {
+            $document = $generationService->generate($rezervacija, $template);
+            if (! $document->hasPdfContent()) {
                 return back()->with('error', 'PDF nije moguće preuzeti jer datoteka ne postoji.');
             }
 
-            $filename = $this->buildContractFilename($generated->contract_number, (string) $generated->id);
+            $filename = $this->buildContractFilename($document->contractNumber, (string) $rezervacija->id);
 
-            return Storage::disk('public')->download(
-                $generated->rendered_pdf_path,
-                $filename
-            );
+            return $this->contractPdfResponse($document, $filename, true);
         } catch (\Throwable $exception) {
             Log::error('Failed to generate contract PDF.', [
                 'reservation_id' => (string) $rezervacija->id,
@@ -189,32 +187,21 @@ class ContractsController extends Controller
         Request $request,
         Reservation $rezervacija,
         ContractGenerationService $generationService
-    ): RedirectResponse|StreamedResponse|HttpResponse {
+    ): RedirectResponse|HttpResponse {
         try {
             $template = $this->resolveTemplate($rezervacija);
             if (! $template) {
                 return back()->with('error', 'Ne postoji aktivan predložak ugovora za tip aranžmana.');
             }
 
-            $generated = $generationService->generate($rezervacija, $template, $request->user()?->id);
-            $generated = $generationService->regeneratePdfIfMissing($generated, $request->user()?->id);
-            if (! $generationService->hasRenderedPdf($generated)) {
-                return response()->view('contracts.generated', [
-                    'html' => (string) ($generated->rendered_html ?? ''),
-                    'company' => data_get($generated->snapshot_data_json, 'data.company', []),
-                    'contract' => data_get($generated->snapshot_data_json, 'data.contract', []),
-                    'document_title' => (string) ($generated->contract_number ?: 'Ugovor'),
-                ]);
+            $document = $generationService->generate($rezervacija, $template);
+            if (! $document->hasPdfContent()) {
+                return $this->contractHtmlResponse($document);
             }
 
-            $filename = $this->buildContractFilename($generated->contract_number, (string) $generated->id);
-            if ($request->boolean('download')) {
-                return Storage::disk('public')->download($generated->rendered_pdf_path, $filename);
-            }
+            $filename = $this->buildContractFilename($document->contractNumber, (string) $rezervacija->id);
 
-            return Storage::disk('public')->response($generated->rendered_pdf_path, $filename, [
-                'Content-Type' => 'application/pdf',
-            ]);
+            return $this->contractPdfResponse($document, $filename, $request->boolean('download'));
         } catch (\Throwable $exception) {
             Log::error('Failed to open contract PDF.', [
                 'reservation_id' => (string) $rezervacija->id,
@@ -231,33 +218,23 @@ class ContractsController extends Controller
     public function publicPdf(
         Request $request,
         Reservation $rezervacija,
-        ContractGenerationService $generationService
-    ): StreamedResponse|HttpResponse {
+        ContractCopyService $contractCopyService
+    ): HttpResponse {
+        $signature = (string) $request->query('signature', '');
+        if (! $contractCopyService->canOpen($rezervacija, $signature)) {
+            abort(404);
+        }
+
         try {
-            $template = $this->resolveTemplate($rezervacija);
-            if (! $template) {
+            $path = $rezervacija->contract_pdf_path;
+            if (! $path) {
                 abort(404);
             }
 
-            $generated = $generationService->generate($rezervacija, $template, null);
-            $generated = $generationService->regeneratePdfIfMissing($generated);
-            if (! $generationService->hasRenderedPdf($generated)) {
-                return response()->view('contracts.generated', [
-                    'html' => (string) ($generated->rendered_html ?? ''),
-                    'company' => data_get($generated->snapshot_data_json, 'data.company', []),
-                    'contract' => data_get($generated->snapshot_data_json, 'data.contract', []),
-                    'document_title' => (string) ($generated->contract_number ?: 'Ugovor'),
-                ]);
-            }
+            $pdfContent = Storage::disk('local')->get($path);
+            $filename = $this->buildContractFilename($rezervacija->documentNumber(), (string) $rezervacija->id);
 
-            $filename = $this->buildContractFilename($generated->contract_number, (string) $generated->id);
-            if ($request->boolean('download')) {
-                return Storage::disk('public')->download($generated->rendered_pdf_path, $filename);
-            }
-
-            return Storage::disk('public')->response($generated->rendered_pdf_path, $filename, [
-                'Content-Type' => 'application/pdf',
-            ]);
+            return $this->rawContractPdfResponse($pdfContent, $filename, $request->boolean('download'));
         } catch (\Throwable $exception) {
             Log::error('Failed to open public contract PDF.', [
                 'reservation_id' => (string) $rezervacija->id,
@@ -265,6 +242,42 @@ class ContractsController extends Controller
             ]);
 
             abort(404);
+        }
+    }
+
+    /**
+     * Prepare the public contract copy and return its share URL.
+     */
+    public function share(
+        Reservation $rezervacija,
+        ContractCopyService $contractCopyService
+    ): JsonResponse {
+        try {
+            $template = $this->resolveTemplate($rezervacija);
+            if (! $template) {
+                return response()->json([
+                    'message' => 'Ne postoji aktivan predložak ugovora za tip aranžmana.',
+                ], 404);
+            }
+
+            $share = $contractCopyService->prepareShare($rezervacija, $template);
+
+            return response()->json([
+                'url' => $this->buildPublicContractShareUrl(route('javni.ugovor.pdf', [
+                    'rezervacija' => $rezervacija->id,
+                    'signature' => $share->signature,
+                ], false)),
+                'expires_at' => $share->expiresAt->toIso8601String(),
+            ]);
+        } catch (\Throwable $exception) {
+            Log::error('Failed to prepare public contract share.', [
+                'reservation_id' => (string) $rezervacija->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'Slanje ugovora trenutno nije moguće. Pokušajte ponovo.',
+            ], 500);
         }
     }
 
@@ -330,6 +343,28 @@ class ContractsController extends Controller
         ]);
     }
 
+    private function contractHtmlResponse(ContractDocument $document): HttpResponse
+    {
+        return response()->view('contracts.generated', $document->pdfViewData());
+    }
+
+    private function contractPdfResponse(ContractDocument $document, string $filename, bool $download): HttpResponse
+    {
+        return $this->rawContractPdfResponse((string) $document->pdfContent, $filename, $download);
+    }
+
+    private function rawContractPdfResponse(string $pdfContent, string $filename, bool $download): HttpResponse
+    {
+        return response($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => HeaderUtils::makeDisposition(
+                $download ? HeaderUtils::DISPOSITION_ATTACHMENT : HeaderUtils::DISPOSITION_INLINE,
+                $filename
+            ),
+            'Content-Length' => (string) strlen($pdfContent),
+        ]);
+    }
+
     /**
      * Return rendered contract HTML payload for React-PDF rendering on frontend.
      */
@@ -344,9 +379,9 @@ class ContractsController extends Controller
                 return response()->json(['message' => 'Ne postoji aktivan predložak ugovora.'], 404);
             }
 
-            $generated = $generationService->generate($rezervacija, $template, $request->user()?->id);
-            $company = data_get($generated->snapshot_data_json, 'data.company', []);
-            $contract = data_get($generated->snapshot_data_json, 'data.contract', []);
+            $document = $generationService->generate($rezervacija, $template, false);
+            $company = $document->company();
+            $contract = $document->contract();
             $footerParts = array_values(array_filter([
                 trim((string) data_get($company, 'name', '')),
                 trim((string) data_get($company, 'address', '')),
@@ -360,10 +395,10 @@ class ContractsController extends Controller
             ], static fn (string $part): bool => $part !== ''));
 
             return response()->json([
-                'html' => (string) ($generated->rendered_html ?? ''),
+                'html' => $document->renderedHtml,
                 'company' => $company,
                 'contract' => $contract,
-                'document_title' => (string) ($generated->contract_number ?: 'Ugovor'),
+                'document_title' => $document->documentTitle(),
                 'footer_text' => implode(' ; ', $footerParts),
             ]);
         } catch (\Throwable $exception) {
@@ -383,6 +418,10 @@ class ContractsController extends Controller
     {
         if ($templateId !== null) {
             return ContractTemplate::query()->active()->find($templateId);
+        }
+
+        if ($rezervacija->contract_template_id !== null) {
+            return ContractTemplate::query()->find($rezervacija->contract_template_id);
         }
 
         $rezervacija->loadMissing('arrangement:id,subagentski_aranzman');
@@ -698,5 +737,18 @@ class ContractsController extends Controller
         $safeNumber = trim($safeNumber, '-');
 
         return sprintf('%s.pdf', $safeNumber);
+    }
+
+    /**
+     * Build an absolute public contract URL from a relative path.
+     */
+    private function buildPublicContractShareUrl(string $path): string
+    {
+        $baseUrl = (string) config('app.url');
+        if ($baseUrl === '') {
+            return url($path);
+        }
+
+        return rtrim($baseUrl, '/').'/'.ltrim($path, '/');
     }
 }

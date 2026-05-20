@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Reservation;
+use App\Services\Contracts\ContractCopyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -83,8 +84,11 @@ class ReservationsApiController extends Controller
         return response()->json($reservation);
     }
 
-    public function update(Request $request, Reservation $reservation): JsonResponse
-    {
+    public function update(
+        Request $request,
+        Reservation $reservation,
+        ContractCopyService $contractCopyService
+    ): JsonResponse {
         $validated = $this->validateReservation($request);
 
         DB::transaction(function () use ($request, $validated, $reservation): void {
@@ -106,6 +110,8 @@ class ReservationsApiController extends Controller
 
             $this->syncReservationClients($reservation, $clientsPayload, $request->user()?->id);
         });
+
+        $contractCopyService->invalidate($reservation->refresh());
 
         return response()->json($reservation->fresh()->load([
             'arrangement',
@@ -281,7 +287,7 @@ class ReservationsApiController extends Controller
         }
 
         if (! $client) {
-            $client = new Client();
+            $client = new Client;
             $client->created_by = $userId;
         }
 

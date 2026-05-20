@@ -81,7 +81,6 @@ export default function ContractTemplatesIndex({ templatesByKey, status, error }
                     'Content-Type': 'application/json',
                     Accept: 'text/html,application/json',
                     'X-CSRF-TOKEN': csrfToken,
-                    'X-XSRF-TOKEN': csrfTokenFromCookie,
                     'X-Requested-With': 'XMLHttpRequest',
                 },
                 body: JSON.stringify({

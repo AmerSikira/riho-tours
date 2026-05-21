@@ -111,11 +111,14 @@ test('contract share prepares one private pdf and public signature link', functi
         ->assertJsonPath('expires_at', '2026-06-19T10:00:00+00:00');
 
     $shareUrl = (string) $response->json('url');
+    $shareSignature = (string) $response->json('signature');
     expect($shareUrl)->toContain('/javni/ugovor/'.$reservation->id.'/pdf?signature=');
+    expect(parse_url($shareUrl, PHP_URL_QUERY))->toContain('signature='.$shareSignature);
 
     $reservation->refresh();
     expect($reservation->contract_pdf_path)->toBe("contracts/reservations/{$reservation->id}/contract.pdf")
         ->and($reservation->contract_expires_at?->toDateTimeString())->toBe('2026-06-19 10:00:00')
+        ->and($shareSignature)->toBe($reservation->contractAccessSignature())
         ->and($reservation->contract_access_signature_hash)->toHaveLength(64)
         ->and(Reservation::hashContractAccessSignature($reservation->contractAccessSignature()))
         ->toBe($reservation->contract_access_signature_hash);

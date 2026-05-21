@@ -135,6 +135,7 @@ type InvoiceDocumentType = 'racun' | 'predracun';
 
 type ContractShareResponse = {
     url?: string;
+    signature?: string;
     message?: string;
     errors?: Record<string, string[]>;
 };
@@ -875,21 +876,31 @@ export default function EditReservation({
     const buildContractShareText = (shareUrl: string): string =>
         `Poštovani,\n\nUgovor ${reservationDocumentNumber} možete pregledati na sljedećem linku:\n${shareUrl}`;
     const resolveCsrfHeaders = (): Record<string, string> => {
+        const xsrfCookie = document.cookie
+            .split('; ')
+            .find((row) => row.startsWith('XSRF-TOKEN='));
+        const encryptedXsrfToken = xsrfCookie
+            ? decodeURIComponent(xsrfCookie.split('=').slice(1).join('='))
+            : '';
+
+        if (encryptedXsrfToken !== '') {
+            return {
+                'X-XSRF-TOKEN': encryptedXsrfToken,
+            };
+        }
+
         const csrfTokenFromMeta =
             document
                 .querySelector('meta[name="csrf-token"]')
                 ?.getAttribute('content') ?? '';
-        const xsrfCookie = document.cookie
-            .split('; ')
-            .find((row) => row.startsWith('XSRF-TOKEN='));
-        const csrfTokenFromCookie = xsrfCookie
-            ? decodeURIComponent(xsrfCookie.split('=').slice(1).join('='))
-            : '';
-        const csrfToken = csrfTokenFromMeta || csrfTokenFromCookie;
 
-        return {
-            'X-CSRF-TOKEN': csrfToken,
-        };
+        if (csrfTokenFromMeta !== '') {
+            return {
+                'X-CSRF-TOKEN': csrfTokenFromMeta,
+            };
+        }
+
+        return {};
     };
     const responseErrorMessage = async (
         response: Response,
@@ -908,10 +919,38 @@ export default function EditReservation({
 
         return firstError ?? payload.message ?? fallback;
     };
+    const ensureContractShareSignature = (
+        shareUrl: string,
+        signature?: string,
+    ): string => {
+        if (!signature || signature.trim() === '') {
+            return shareUrl;
+        }
+
+        try {
+            const parsed = new URL(shareUrl, window.location.origin);
+
+            if (!parsed.searchParams.has('signature')) {
+                parsed.searchParams.set('signature', signature);
+            }
+
+            return parsed.toString();
+        } catch {
+            const separator = shareUrl.includes('?') ? '&' : '?';
+
+            return `${shareUrl}${separator}signature=${encodeURIComponent(signature)}`;
+        }
+    };
     const prepareContractShare = async (): Promise<string> => {
         setIsPreparingContractShare(true);
 
         try {
+            const csrfHeaders = resolveCsrfHeaders();
+
+            if (Object.keys(csrfHeaders).length === 0) {
+                throw new Error('CSRF token nije dostupan. Osvježite stranicu i pokušajte ponovo.');
+            }
+
             const response = await fetch(
                 `/rezervacije/${rezervacija.id}/ugovor/podijeli`,
                 {
@@ -920,7 +959,7 @@ export default function EditReservation({
                     headers: {
                         Accept: 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
-                        ...resolveCsrfHeaders(),
+                        ...csrfHeaders,
                     },
                 },
             );
@@ -940,7 +979,7 @@ export default function EditReservation({
                 throw new Error('Server nije vratio link ugovora.');
             }
 
-            return payload.url;
+            return ensureContractShareSignature(payload.url, payload.signature);
         } finally {
             setIsPreparingContractShare(false);
         }

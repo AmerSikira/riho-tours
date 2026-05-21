@@ -32,6 +32,10 @@ _Avoid_: Reservation cleanup, expired reservation deletion
 Removal of the current Contract Copy because Reservation data changed. It keeps the Reservation and Contract Access Signature intact, and the next Contract Share Action prepares a new Contract Copy.
 _Avoid_: Signature reset, reservation reset
 
+**Audit Trail**:
+A lightweight history of meaningful business changes in Riho: who changed a business record, when it changed, and what business value changed when that matters. It is not a full archive of generated document bodies, rendered snapshots, binary content, or other derived artifacts.
+_Avoid_: Activity log, full data archive, generated content archive
+
 ## Example Dialogue
 
 Developer: "If I open a Shared Contract Link from last week, should it show last week's contract?"

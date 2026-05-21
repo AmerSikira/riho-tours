@@ -261,12 +261,17 @@ class ContractsController extends Controller
             }
 
             $share = $contractCopyService->prepareShare($rezervacija, $template);
+            $sharePath = route('javni.ugovor.pdf', [
+                'rezervacija' => $rezervacija->id,
+            ], false);
+            $separator = str_contains($sharePath, '?') ? '&' : '?';
+            $sharePathWithSignature = $sharePath.$separator.http_build_query([
+                'signature' => $share->signature,
+            ]);
 
             return response()->json([
-                'url' => $this->buildPublicContractShareUrl(route('javni.ugovor.pdf', [
-                    'rezervacija' => $rezervacija->id,
-                    'signature' => $share->signature,
-                ], false)),
+                'url' => $this->buildPublicContractShareUrl($sharePathWithSignature),
+                'signature' => $share->signature,
                 'expires_at' => $share->expiresAt->toIso8601String(),
             ]);
         } catch (\Throwable $exception) {

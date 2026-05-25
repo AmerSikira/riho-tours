@@ -9,14 +9,15 @@ import AppLayout from '@/layouts/app-layout';
 import { formatDateDisplay } from '@/lib/utils';
 import type { BreadcrumbItem } from '@/types';
 
-type Uplata = {
+type PaymentEntry = {
     id: string;
-    uplatio: string;
-    datum: string;
-    za_sta: string;
-    iznos: string;
-    nacin_uplate: string;
-    nacin_uplate_label: string;
+    reservation_number: string;
+    payment_date: string;
+    payer: string;
+    arrangement: string;
+    payment_kind: string;
+    payment_method: string;
+    amount: number;
 };
 
 type ArrangementOption = {
@@ -29,8 +30,8 @@ type ArrangementOption = {
 };
 
 type Props = {
-    uplate: {
-        data: Uplata[];
+    payment_entries: {
+        data: PaymentEntry[];
         current_page: number;
         last_page: number;
         total: number;
@@ -54,16 +55,30 @@ const breadcrumbs: BreadcrumbItem[] = [
 const formatArrangementOption = (arrangement: ArrangementOption): string =>
     `${arrangement.sifra} - ${arrangement.naziv_putovanja} (${formatDateDisplay(arrangement.datum_polaska)} / ${formatDateDisplay(arrangement.datum_povratka)})`;
 
-export default function BlagajnaIndex({ uplate, filters, selected_aranzman: selectedArrangement }: Props) {
+const formatAmount = (value: number): string => {
+    const amount = Number(value);
+
+    return Number.isFinite(amount) ? amount.toFixed(2) : '0.00';
+};
+
+export default function BlagajnaIndex({
+    payment_entries: paymentEntries,
+    filters,
+    selected_aranzman: selectedArrangement,
+}: Props) {
     const [searchQuery, setSearchQuery] = useState(
         selectedArrangement
             ? formatArrangementOption(selectedArrangement)
             : (filters.pretraga ?? ''),
     );
-    const [arrangementId, setArrangementId] = useState(filters.aranzman_id ?? '');
+    const [arrangementId, setArrangementId] = useState(
+        filters.aranzman_id ?? '',
+    );
     const [dateFrom, setDateFrom] = useState(filters.datum_od ?? '');
     const [dateTo, setDateTo] = useState(filters.datum_do ?? '');
-    const [arrangementSuggestions, setArrangementSuggestions] = useState<ArrangementOption[]>([]);
+    const [arrangementSuggestions, setArrangementSuggestions] = useState<
+        ArrangementOption[]
+    >([]);
     const [isArrangementOpen, setIsArrangementOpen] = useState(false);
     const searchRequest = useRef<AbortController | null>(null);
 
@@ -80,19 +95,23 @@ export default function BlagajnaIndex({ uplate, filters, selected_aranzman: sele
         const controller = new AbortController();
         searchRequest.current = controller;
 
-        void fetch(`/blagajna/aranzmani/pretraga?q=${encodeURIComponent(normalizedQuery)}`, {
-            method: 'GET',
-            headers: {
-                Accept: 'application/json',
+        void fetch(
+            `/blagajna/aranzmani/pretraga?q=${encodeURIComponent(normalizedQuery)}`,
+            {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/json',
+                },
+                signal: controller.signal,
             },
-            signal: controller.signal,
-        })
+        )
             .then(async (response) => {
                 if (!response.ok) {
                     throw new Error('Neuspješno učitavanje aranžmana.');
                 }
 
-                const suggestions = (await response.json()) as ArrangementOption[];
+                const suggestions =
+                    (await response.json()) as ArrangementOption[];
                 setArrangementSuggestions(suggestions);
             })
             .catch((error: unknown) => {
@@ -124,7 +143,9 @@ export default function BlagajnaIndex({ uplate, filters, selected_aranzman: sele
             '/blagajna',
             {
                 aranzman_id: arrangementId || undefined,
-                pretraga: arrangementId ? undefined : searchQuery.trim() || undefined,
+                pretraga: arrangementId
+                    ? undefined
+                    : searchQuery.trim() || undefined,
                 datum_od: dateFrom || undefined,
                 datum_do: dateTo || undefined,
             },
@@ -140,7 +161,9 @@ export default function BlagajnaIndex({ uplate, filters, selected_aranzman: sele
             '/blagajna',
             {
                 aranzman_id: arrangementId || undefined,
-                pretraga: arrangementId ? undefined : searchQuery.trim() || undefined,
+                pretraga: arrangementId
+                    ? undefined
+                    : searchQuery.trim() || undefined,
                 datum_od: dateFrom || undefined,
                 datum_do: dateTo || undefined,
                 page,
@@ -152,7 +175,7 @@ export default function BlagajnaIndex({ uplate, filters, selected_aranzman: sele
         );
     };
 
-    const handleCsvExport = () => {
+    const handleExcelExport = () => {
         const searchParams = new URLSearchParams();
 
         if (arrangementId) {
@@ -169,7 +192,7 @@ export default function BlagajnaIndex({ uplate, filters, selected_aranzman: sele
             searchParams.set('datum_do', dateTo);
         }
 
-        window.location.assign(`/blagajna/izvoz/csv?${searchParams.toString()}`);
+        window.location.assign(`/blagajna/izvoz?${searchParams.toString()}`);
     };
 
     return (
@@ -181,49 +204,77 @@ export default function BlagajnaIndex({ uplate, filters, selected_aranzman: sele
                     <div>
                         <h1 className="text-xl font-semibold">Blagajna</h1>
                         <p className="text-sm text-muted-foreground">
-                            Pregled svih uplata sa filterima i izvozom u CSV.
+                            Pregled evidentiranih uplata sa filterima i Excel
+                            izvozom.
                         </p>
                     </div>
 
-                    <Button type="button" variant="outline" onClick={handleCsvExport}>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleExcelExport}
+                    >
                         <Download className="mr-2 size-4" />
-                        Izvezi CSV
+                        Izvezi Excel
                     </Button>
                 </div>
 
-                <form onSubmit={handleSearchSubmit} className="grid gap-2 md:grid-cols-[1fr_180px_180px_auto]">
+                <form
+                    onSubmit={handleSearchSubmit}
+                    className="grid gap-2 md:grid-cols-[1fr_180px_180px_auto]"
+                >
                     <div className="relative">
                         <Input
                             value={searchQuery}
-                            onChange={(event) => handleArrangementInputChange(event.target.value)}
+                            onChange={(event) =>
+                                handleArrangementInputChange(event.target.value)
+                            }
                             onFocus={() => setIsArrangementOpen(true)}
                             onBlur={() => {
-                                window.setTimeout(() => setIsArrangementOpen(false), 120);
+                                window.setTimeout(
+                                    () => setIsArrangementOpen(false),
+                                    120,
+                                );
                             }}
                             placeholder="Pretraga po osobi, aranžmanu ili šifri"
                             aria-label="Pretraga uplata"
                         />
-                        {isArrangementOpen && arrangementSuggestions.length > 0 && (
-                            <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border bg-background shadow-sm">
-                                {arrangementSuggestions.map((arrangement) => (
-                                    <button
-                                        key={arrangement.id}
-                                        type="button"
-                                        className="w-full px-3 py-2 text-left text-sm hover:bg-muted"
-                                        onMouseDown={(event) => {
-                                            event.preventDefault();
-                                            handleArrangementSelect(arrangement);
-                                        }}
-                                    >
-                                        {formatArrangementOption(arrangement)}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
+                        {isArrangementOpen &&
+                            arrangementSuggestions.length > 0 && (
+                                <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border bg-background shadow-sm">
+                                    {arrangementSuggestions.map(
+                                        (arrangement) => (
+                                            <button
+                                                key={arrangement.id}
+                                                type="button"
+                                                className="w-full px-3 py-2 text-left text-sm hover:bg-muted"
+                                                onMouseDown={(event) => {
+                                                    event.preventDefault();
+                                                    handleArrangementSelect(
+                                                        arrangement,
+                                                    );
+                                                }}
+                                            >
+                                                {formatArrangementOption(
+                                                    arrangement,
+                                                )}
+                                            </button>
+                                        ),
+                                    )}
+                                </div>
+                            )}
                     </div>
 
-                    <Input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
-                    <Input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
+                    <Input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(event) => setDateFrom(event.target.value)}
+                    />
+                    <Input
+                        type="date"
+                        value={dateTo}
+                        onChange={(event) => setDateTo(event.target.value)}
+                    />
 
                     <Button type="submit">
                         <Search className="mr-2 size-4" />
@@ -235,28 +286,68 @@ export default function BlagajnaIndex({ uplate, filters, selected_aranzman: sele
                     <table className="min-w-full divide-y divide-border text-sm">
                         <thead className="bg-muted/30">
                             <tr>
-                                <th className="px-4 py-3 text-left font-medium">Ko je uplatio</th>
-                                <th className="px-4 py-3 text-left font-medium">Kada</th>
-                                <th className="px-4 py-3 text-left font-medium">Za šta</th>
-                                <th className="px-4 py-3 text-left font-medium">Iznos</th>
-                                <th className="px-4 py-3 text-left font-medium">Način uplate</th>
+                                <th className="px-4 py-3 text-left font-medium">
+                                    Broj rezervacije
+                                </th>
+                                <th className="px-4 py-3 text-left font-medium">
+                                    Datum uplate
+                                </th>
+                                <th className="px-4 py-3 text-left font-medium">
+                                    Ko je uplatio
+                                </th>
+                                <th className="px-4 py-3 text-left font-medium">
+                                    Aranžman
+                                </th>
+                                <th className="px-4 py-3 text-left font-medium">
+                                    Vrsta uplate
+                                </th>
+                                <th className="px-4 py-3 text-left font-medium">
+                                    Način uplate
+                                </th>
+                                <th className="px-4 py-3 text-left font-medium">
+                                    Iznos
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">
-                            {uplate.data.length === 0 && (
+                            {paymentEntries.data.length === 0 && (
                                 <tr>
-                                    <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
+                                    <td
+                                        colSpan={7}
+                                        className="px-4 py-6 text-center text-muted-foreground"
+                                    >
                                         Nema uplata za zadane filtere.
                                     </td>
                                 </tr>
                             )}
-                            {uplate.data.map((uplata) => (
-                                <tr key={uplata.id} className="hover:bg-muted/20">
-                                    <td className="px-4 py-3">{uplata.uplatio || '-'}</td>
-                                    <td className="px-4 py-3">{formatDateDisplay(uplata.datum)}</td>
-                                    <td className="px-4 py-3">{uplata.za_sta || '-'}</td>
-                                    <td className="px-4 py-3">{uplata.iznos} KM</td>
-                                    <td className="px-4 py-3">{uplata.nacin_uplate_label}</td>
+                            {paymentEntries.data.map((paymentEntry) => (
+                                <tr
+                                    key={paymentEntry.id}
+                                    className="hover:bg-muted/20"
+                                >
+                                    <td className="px-4 py-3">
+                                        {paymentEntry.reservation_number || '-'}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {formatDateDisplay(
+                                            paymentEntry.payment_date,
+                                        )}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {paymentEntry.payer || '-'}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {paymentEntry.arrangement || '-'}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {paymentEntry.payment_kind}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {paymentEntry.payment_method}
+                                    </td>
+                                    <td className="px-4 py-3">
+                                        {formatAmount(paymentEntry.amount)} KM
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -264,9 +355,9 @@ export default function BlagajnaIndex({ uplate, filters, selected_aranzman: sele
                 </div>
 
                 <PaginationControls
-                    currentPage={uplate.current_page}
-                    lastPage={uplate.last_page}
-                    total={uplate.total}
+                    currentPage={paymentEntries.current_page}
+                    lastPage={paymentEntries.last_page}
+                    total={paymentEntries.total}
                     onPageChange={goToPage}
                 />
             </div>

@@ -46,7 +46,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('blagajna/aranzmani/pretraga', [BlagajnaController::class, 'searchArrangements'])
         ->middleware('permission:pregled blagajne')
         ->name('blagajna.aranzmani.search');
-    Route::get('blagajna/izvoz/csv', [BlagajnaController::class, 'export'])
+    Route::get('blagajna/izvoz', [BlagajnaController::class, 'export'])
         ->middleware('permission:izvoz blagajne')
         ->name('blagajna.export');
     Route::get('aranzmani', [ArrangementsController::class, 'index'])

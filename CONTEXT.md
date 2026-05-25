@@ -36,6 +36,38 @@ _Avoid_: Signature reset, reservation reset
 A lightweight history of meaningful business changes in Riho: who changed a business record, when it changed, and what business value changed when that matters. It is not a full archive of generated document bodies, rendered snapshots, binary content, or other derived artifacts.
 _Avoid_: Activity log, full data archive, generated content archive
 
+**Blagajna Payment Ledger**:
+A cash-desk view of received payments toward Reservations. It contains one Payment Entry for each received payment or paid installment with a positive paid amount, and is used for operational reconciliation, not for listing Reservation totals or expected future payments.
+_Avoid_: Reservation export, reservation total report
+
+**Payment Entry**:
+A single received payment toward a Reservation, including who paid, when it was paid, what Arrangement it belongs to, the Reservation number, payment method, and paid amount. A fully paid Reservation has one Payment Entry, while installment payments may create several Payment Entries.
+_Avoid_: Reservation row, total reservation amount
+
+**Payment Kind**:
+The role of a Payment Entry in settling a Reservation, such as a complete payment or a numbered installment. It is different from the Payment Method.
+_Avoid_: Payment method, payment channel
+
+**Payment Method**:
+The channel by which money was received for a Payment Entry, such as cash or bank transfer. It is different from the Payment Kind.
+_Avoid_: Payment kind, payment plan
+
+**Payer Label**:
+The business-facing name shown for who made a Payment Entry. When the exact payer is not captured separately, all linked Reservation passengers may be shown together in one Payer Label.
+_Avoid_: Passenger row, separate payer per passenger
+
+**Blagajna Reporting Date**:
+The date used to include Payment Entries in a Blagajna report. Riho currently uses the Reservation creation date as the Blagajna Reporting Date, even when a Payment Entry has its own payment date.
+_Avoid_: Payment date filter, installment date filter
+
+**Payment Date**:
+The date shown for when a Payment Entry was received. If a specific payment date is not captured, Riho uses the Reservation creation date as the fallback Payment Date.
+_Avoid_: Blagajna reporting date, reservation filter date
+
+**Deferred Reservation Payment**:
+A Reservation payment obligation that has not yet been received. It does not create a Payment Entry until money is actually received.
+_Avoid_: Paid deferred reservation, expected payment entry
+
 ## Example Dialogue
 
 Developer: "If I open a Shared Contract Link from last week, should it show last week's contract?"
@@ -85,3 +117,19 @@ Domain expert: "The link carries the Contract Access Signature, while the Reserv
 Developer: "If the stored Contract Copy is gone but a recipient still has the Shared Contract Link, should the link rebuild it?"
 
 Domain expert: "No. The link fails because opening a Shared Contract Link is read-only."
+
+Developer: "Should Blagajna export one row per Reservation?"
+
+Domain expert: "No. The Blagajna Payment Ledger exports one row per Payment Entry."
+
+Developer: "If a Reservation has three installment slots but only two have positive paid amounts, how many Payment Entries exist?"
+
+Domain expert: "Two. Expected or empty installments are not Payment Entries."
+
+Developer: "If several passengers are linked to the same Reservation payment, should they become separate ledger rows?"
+
+Domain expert: "No. They appear together in one Payer Label on the same Payment Entry."
+
+Developer: "Does a Deferred Reservation Payment appear in Blagajna?"
+
+Domain expert: "Not until money is actually received."

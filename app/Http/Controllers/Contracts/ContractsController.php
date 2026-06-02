@@ -541,7 +541,7 @@ class ContractsController extends Controller
         $rezervacija->loadMissing([
             'arrangement:id,sifra,naziv_putovanja,destinacija,datum_polaska,datum_povratka',
             'reservationClients.client:id,ime,prezime,adresa,broj_telefona,email',
-            'reservationClients.package:id,naziv,cijena',
+            'reservationClients.package:id,naziv,cijena,ukupni_trosak',
         ]);
 
         $setting = Setting::query()->first();
@@ -579,6 +579,7 @@ class ContractsController extends Controller
         $number = $baseNumber;
         $lineItems = [];
         $total = 0.0;
+        $totals = null;
         $selectedInvoiceClient = $rezervacija->reservationClients
             ->firstWhere('ime_na_predracunu_racunu', true)
             ?? $rezervacija->reservationClients->first();
@@ -639,6 +640,34 @@ class ContractsController extends Controller
                 array_keys($lineItems)
             ));
             $total = collect($lineItems)->sum('amount');
+            $packageTotal = $rezervacija->reservationClients->sum(
+                fn (ReservationClient $item): float => (float) ($item->package?->cijena ?? 0)
+            );
+            $packageCostTotal = $rezervacija->reservationClients->sum(
+                fn (ReservationClient $item): float => (float) ($item->package?->ukupni_trosak ?? 0)
+            );
+            $addOnsTotal = $rezervacija->reservationClients->sum(
+                fn (ReservationClient $item): float => (float) ($item->dodatno_na_cijenu ?? 0)
+                    + (float) ($item->boravisna_taksa ?? 0)
+                    + (float) ($item->osiguranje ?? 0)
+                    + (float) ($item->doplata_jednokrevetna_soba ?? 0)
+                    + (float) ($item->doplata_dodatno_sjediste ?? 0)
+                    + (float) ($item->doplata_sjediste_po_zelji ?? 0)
+            );
+            $discountTotal = $rezervacija->reservationClients->sum(
+                fn (ReservationClient $item): float => (float) ($item->popust ?? 0)
+            );
+            $isInVatSystem = (bool) ($company['u_pdv_sistemu'] ?? true);
+            $pdvAmount = $isInVatSystem
+                ? max($packageTotal - $packageCostTotal - $discountTotal, 0) * 0.17
+                : 0.0;
+            $totals = [
+                'add_ons_total' => $addOnsTotal,
+                'subtotal_without_pdv' => $isInVatSystem ? $total - $pdvAmount : $total,
+                'pdv_amount' => $pdvAmount,
+                'discount_total' => $discountTotal,
+                'final_total' => $total,
+            ];
         }
 
         if ($tip === 'rata_predracun' || $tip === 'rata_avansna') {
@@ -705,6 +734,7 @@ class ContractsController extends Controller
             'company' => $company,
             'line_items' => $lineItems,
             'total' => $total,
+            'totals' => $totals,
             'is_racun' => $tip === 'racun',
             'filename' => sprintf('%s.pdf', trim(strtolower(str_replace([' ', '/'], ['-', '-'], $number)), '-')),
         ];

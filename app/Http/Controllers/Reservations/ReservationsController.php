@@ -293,6 +293,7 @@ class ReservationsController extends Controller
                     'broj_dokumenta' => (string) ($row['broj_dokumenta'] ?? ''),
                     'package' => (string) ($row['package'] ?? ''),
                     'broj_rezervacije' => (string) ($row['broj_rezervacije'] ?? ''),
+                    'napomena' => (string) ($row['napomena'] ?? ''),
                 ];
             })
             ->values();
@@ -315,6 +316,7 @@ class ReservationsController extends Controller
             'broj_dokumenta' => (string) ($client?->broj_dokumenta ?? ''),
             'package' => (string) ($reservationClient?->package?->naziv ?? ''),
             'broj_rezervacije' => (string) ($reservation->order_num ?? ''),
+            'napomena' => (string) ($reservation->napomena ?? ''),
         ];
     }
 

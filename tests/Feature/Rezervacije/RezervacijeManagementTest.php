@@ -1,17 +1,24 @@
 <?php
 
+use App\Exports\ReservationsClientsExport;
 use App\Models\Arrangement;
 use App\Models\ArrangementPackage;
 use App\Models\Client;
 use App\Models\ReservationClient;
 use App\Models\Reservation;
 use App\Models\User;
+use Carbon\Carbon;
+use Database\Seeders\RolesSeeder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
+use Maatwebsite\Excel\Facades\Excel;
 
 beforeEach(function () {
+    $this->seed(RolesSeeder::class);
+
     $user = User::factory()->create();
+    $user->assignRole('admin');
 
     $this->actingAs($user);
 });
@@ -241,6 +248,7 @@ test('new rezervacija can be created', function () {
         ],
         'status' => 'potvrdjena',
         'placanje' => 'placeno',
+        'nacin_uplate' => 'cash',
         'napomena' => 'VIP putnik',
     ]);
 
@@ -357,6 +365,7 @@ test('rezervacija can be updated', function () {
         ],
         'status' => 'potvrdjena',
         'placanje' => 'placeno',
+        'nacin_uplate' => 'cash',
         'napomena' => 'Ažurirano',
     ]);
 
@@ -369,4 +378,77 @@ test('rezervacija can be updated', function () {
     expect($rezervacija->status)->toBe('potvrdjena');
 
     expect(ReservationClient::where('rezervacija_id', $rezervacija->id)->count())->toBe(2);
+});
+
+test('selected reservations export includes napomena in the Excel file', function () {
+    Carbon::setTestNow('2026-06-02 09:30:00');
+    Excel::fake();
+
+    $aranzman = createArrangementForReservations(
+        'RSV-13',
+        'Istanbul',
+        '2026-09-01',
+        '2026-09-06'
+    );
+    $paket = createPackageForArrangement($aranzman, 'Premium');
+
+    $rezervacija = Reservation::create([
+        'order_num' => 713,
+        'aranzman_id' => $aranzman->id,
+        'ime_prezime' => 'Export Test',
+        'broj_putnika' => 1,
+        'status' => 'potvrdjena',
+        'placanje' => 'placeno',
+        'napomena' => 'Kasni dolazak putnika',
+    ]);
+
+    $klijent = Client::create([
+        'ime' => 'Amina',
+        'prezime' => 'Hodžić',
+        'broj_dokumenta' => '0303000500016',
+        'datum_rodjenja' => '1995-03-03',
+        'adresa' => 'Test adresa 13',
+        'city' => 'Tuzla',
+        'broj_telefona' => '061333444',
+        'email' => 'amina@example.com',
+    ]);
+
+    ReservationClient::create([
+        'rezervacija_id' => $rezervacija->id,
+        'klijent_id' => $klijent->id,
+        'paket_id' => $paket->id,
+    ]);
+
+    $this->get('/rezervacije/izvoz/putnici?reservation_ids[]='.$rezervacija->id);
+
+    Excel::assertDownloaded(
+        'selected-reservations-clients-20260602_093000.xlsx',
+        function (ReservationsClientsExport $export): bool {
+            expect($export->headings())->toBe([
+                'Redni broj',
+                'Ime i prezime',
+                'Grad',
+                'Telefon',
+                'Datum rođenja',
+                'Broj dokumenta',
+                'Package',
+                'Broj rezervacije',
+                'Napomena',
+            ]);
+
+            expect($export->collection()->all())->toBe([[
+                'redni_broj' => 1,
+                'ime_i_prezime' => 'Amina Hodžić',
+                'grad' => 'Tuzla',
+                'telefon' => '061333444',
+                'datum_rodjenja' => '03.03.1995',
+                'broj_dokumenta' => '0303000500016',
+                'package' => 'Premium',
+                'broj_rezervacije' => '713',
+                'napomena' => 'Kasni dolazak putnika',
+            ]]);
+
+            return true;
+        }
+    );
 });

@@ -1,14 +1,18 @@
 <?php
 
 use App\Models\Arrangement;
+use App\Models\ArrangementPackage;
+use App\Models\Client;
 use App\Models\ContractTemplate;
 use App\Models\Reservation;
+use App\Models\ReservationClient;
 use App\Models\User;
 use App\Services\Contracts\ContractDocument;
 use App\Services\Contracts\ContractGenerationService;
 use Database\Seeders\RolesSeeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 afterEach(function (): void {
@@ -69,6 +73,39 @@ function contractSharingReservation(Arrangement $arrangement, User $user, ?Contr
         'broj_putnika' => 1,
         'status' => 'potvrdjena',
         'placanje' => 'placeno',
+        'created_by' => $user->id,
+        'updated_by' => $user->id,
+    ]);
+}
+
+function contractSharingPackage(Arrangement $arrangement, User $user): ArrangementPackage
+{
+    return ArrangementPackage::query()->create([
+        'aranzman_id' => $arrangement->id,
+        'naziv' => 'Standard',
+        'opis' => null,
+        'cijena' => 1200,
+        'smjestaj_trosak' => 400,
+        'transport_trosak' => 150,
+        'fakultativne_stvari_trosak' => 50,
+        'ostalo_trosak' => 25,
+        'is_active' => true,
+        'created_by' => $user->id,
+        'updated_by' => $user->id,
+    ]);
+}
+
+function contractSharingClient(User $user): Client
+{
+    return Client::query()->create([
+        'ime' => 'Amina',
+        'prezime' => 'Test',
+        'broj_dokumenta' => '123456789',
+        'datum_rodjenja' => '1995-05-05',
+        'adresa' => 'Test address',
+        'city' => 'Sarajevo',
+        'broj_telefona' => '+38761111222',
+        'email' => 'amina@example.com',
         'created_by' => $user->id,
         'updated_by' => $user->id,
     ]);
@@ -198,4 +235,41 @@ test('contract share opportunistically clears expired copies without deleting re
         ->and($expiredReservation->contract_expires_at)->toBeNull();
 
     Storage::disk('local')->assertMissing($expiredPath);
+});
+
+test('public financial document preview computes package cost from cost component fields', function (): void {
+    Carbon::setTestNow('2026-06-02 10:00:00');
+
+    $user = contractSharingUser();
+    $arrangement = contractSharingArrangement($user);
+    $reservation = contractSharingReservation($arrangement, $user);
+    $package = contractSharingPackage($arrangement, $user);
+    $client = contractSharingClient($user);
+
+    ReservationClient::query()->create([
+        'rezervacija_id' => $reservation->id,
+        'klijent_id' => $client->id,
+        'paket_id' => $package->id,
+        'dodatno_na_cijenu' => 10,
+        'popust' => 5,
+        'boravisna_taksa' => 3,
+        'osiguranje' => 2,
+        'doplata_jednokrevetna_soba' => 0,
+        'doplata_dodatno_sjediste' => 0,
+        'doplata_sjediste_po_zelji' => 0,
+    ]);
+
+    $url = URL::temporarySignedRoute(
+        'javni.finansijski-dokumenti.pregled',
+        now()->addDay(),
+        [
+            'rezervacija' => $reservation->id,
+            'tip' => 'predracun',
+        ],
+        absolute: false
+    );
+
+    $this->get($url)
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf');
 });

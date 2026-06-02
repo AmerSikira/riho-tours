@@ -72,4 +72,18 @@ class ArrangementPackage extends Model
     {
         return $this->hasMany(ReservationClient::class, 'paket_id');
     }
+
+    /**
+     * Calculate total package cost from stored cost components.
+     */
+    public function getUkupniTrosakAttribute(): float
+    {
+        return round(
+            (float) ($this->smjestaj_trosak ?? 0)
+            + (float) ($this->transport_trosak ?? 0)
+            + (float) ($this->fakultativne_stvari_trosak ?? 0)
+            + (float) ($this->ostalo_trosak ?? 0),
+            2
+        );
+    }
 }

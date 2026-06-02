@@ -541,7 +541,7 @@ class ContractsController extends Controller
         $rezervacija->loadMissing([
             'arrangement:id,sifra,naziv_putovanja,destinacija,datum_polaska,datum_povratka',
             'reservationClients.client:id,ime,prezime,adresa,broj_telefona,email',
-            'reservationClients.package:id,naziv,cijena,ukupni_trosak',
+            'reservationClients.package:id,naziv,cijena,smjestaj_trosak,transport_trosak,fakultativne_stvari_trosak,ostalo_trosak',
         ]);
 
         $setting = Setting::query()->first();

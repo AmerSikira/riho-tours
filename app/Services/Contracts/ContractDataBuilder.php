@@ -486,7 +486,7 @@ class ContractDataBuilder
             $company['address'] ?? '',
             'ID: '.($company['id_number'] ?? ''),
             'VAT: '.($company['vat_number'] ?? ''),
-            'Representative: '.($company['representative_name'] ?? ''),
+            'Broj računa: '.($company['representative_name'] ?? ''),
         ];
 
         $htmlLines = collect($lines)

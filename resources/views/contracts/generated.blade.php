@@ -52,7 +52,7 @@
             ($company['email'] ?? '') !== '' ? 'Email: '.$company['email'] : '',
             ($company['id_number'] ?? '') !== '' ? 'ID: '.$company['id_number'] : '',
             ($company['vat_number'] ?? '') !== '' ? 'PDV: '.$company['vat_number'] : '',
-            ($company['representative_name'] ?? '') !== '' ? 'TRN: '.$company['representative_name'] : '',
+            ($company['representative_name'] ?? '') !== '' ? 'Broj računa: '.$company['representative_name'] : '',
         ], static fn ($line) => trim((string) $line) !== '');
     @endphp
 

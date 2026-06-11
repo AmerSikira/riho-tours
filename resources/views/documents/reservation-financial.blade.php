@@ -175,7 +175,7 @@
             <div>ID: {{ $company['id_number'] ?: '-' }}</div>
             <div>MBS: {{ $company['maticni_broj_subjekta_upisa'] ?: '-' }}</div>
             <div>PDV: {{ !empty($company['u_pdv_sistemu']) ? ($company['vat_number'] ?: '-') : 'Nije u PDV sistemu' }}</div>
-            <div>TRN: {{ $company['trn'] ?: '-' }}</div>
+            <div>Broj računa: {{ $company['trn'] ?: '-' }}</div>
             <div>Banka: {{ $company['bank'] ?: '-' }}</div>
             <div>IBAN: {{ $company['iban'] ?: '-' }}</div>
             <div>SWIFT: {{ $company['swift'] ?: '-' }}</div>

@@ -1,6 +1,6 @@
 import { Document, Font, Image, Page, StyleSheet, Text, View, pdf } from '@react-pdf/renderer';
-import Html from 'react-pdf-html';
 import type { ReactElement } from 'react';
+import Html from 'react-pdf-html';
 
 const PAGE_WIDTH_PT = 595.28; // A4 width in points
 const PAGE_HORIZONTAL_PADDING_PT = 30 * 2; // left + right
@@ -191,7 +191,7 @@ const Footer = ({
                 <Text>ID: {company.company_id || '-'}</Text>
                 <Text>MBS: {company.maticni_broj_subjekta_upisa || '-'}</Text>
                 <Text>PDV: {company.u_pdv_sistemu ? company.pdv || '-' : 'Nije u PDV sistemu'}</Text>
-                <Text>TRN: {company.trn || '-'}</Text>
+                <Text>Broj računa: {company.trn || '-'}</Text>
                 <Text>Banka: {company.banka || '-'}</Text>
                 <Text>IBAN: {company.iban || '-'}</Text>
                 <Text>SWIFT: {company.swift || '-'}</Text>
@@ -324,10 +324,12 @@ export const openPdfPreview = async (doc: ReactElement<any>, title: string): Pro
 
     if (!previewWindow) {
         URL.revokeObjectURL(blobUrl);
+
         return;
     }
 
     previewWindow.document.title = title;
+
     window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
 };
 

@@ -111,7 +111,7 @@ function contractSharingClient(User $user): Client
     ]);
 }
 
-function fakeContractPdfGeneration(int $times = 1): void
+function fakeContractPdfGeneration(int $times = 1, string $pdfContent = '%PDF-1.4 test contract'): void
 {
     $mock = Mockery::mock(ContractGenerationService::class);
     $mock->shouldReceive('generate')
@@ -119,7 +119,7 @@ function fakeContractPdfGeneration(int $times = 1): void
         ->andReturnUsing(fn (Reservation $reservation): ContractDocument => new ContractDocument(
             contractNumber: $reservation->documentNumber(),
             renderedHtml: '<p>contract</p>',
-            pdfContent: '%PDF-1.4 test contract',
+            pdfContent: $pdfContent,
             data: ['contract' => ['number' => $reservation->documentNumber()]],
             computedPlaceholders: [],
             generatedAt: Carbon::now(),
@@ -161,18 +161,59 @@ test('contract share prepares one private pdf and public signature link', functi
         ->toBe($reservation->contract_access_signature_hash);
 
     Storage::disk('local')->assertExists($reservation->contract_pdf_path);
+    Storage::disk('local')->assertExists($reservation->contract_pdf_path.'.meta.json');
 
     $publicPath = parse_url($shareUrl, PHP_URL_PATH).'?'.parse_url($shareUrl, PHP_URL_QUERY);
 
-    $this->get($publicPath)
+    $publicResponse = $this->get($publicPath);
+    $publicResponse
         ->assertOk()
         ->assertHeader('Content-Type', 'application/pdf')
         ->assertSee('%PDF-1.4 test contract', false);
+    expect((string) $publicResponse->headers->get('Cache-Control'))
+        ->toContain('no-store')
+        ->toContain('no-cache');
 
     $this->get(route('javni.ugovor.pdf', [
         'rezervacija' => $reservation->id,
         'signature' => 'bad-signature',
     ], false))->assertNotFound();
+});
+
+test('public contract link refreshes stale stored copy before streaming', function (): void {
+    Carbon::setTestNow('2026-05-20 10:00:00');
+    Storage::fake('local');
+
+    $user = contractSharingUser();
+    $arrangement = contractSharingArrangement($user);
+    $template = contractSharingTemplate($user);
+    $reservation = contractSharingReservation($arrangement, $user, $template);
+    $signature = $reservation->contractAccessSignature();
+    $path = "contracts/reservations/{$reservation->id}/contract.pdf";
+
+    Storage::disk('local')->put($path, '%PDF-1.4 stale TRN contract');
+    $reservation->forceFill([
+        'contract_pdf_path' => $path,
+        'contract_expires_at' => Carbon::now()->addDay(),
+        'contract_access_signature_hash' => Reservation::hashContractAccessSignature($signature),
+    ])->saveQuietly();
+
+    fakeContractPdfGeneration(pdfContent: '%PDF-1.4 refreshed Broj računa contract');
+
+    $publicResponse = $this->get(route('javni.ugovor.pdf', [
+        'rezervacija' => $reservation->id,
+        'signature' => $signature,
+    ], false));
+    $publicResponse
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf')
+        ->assertSee('%PDF-1.4 refreshed Broj računa contract', false);
+    expect((string) $publicResponse->headers->get('Cache-Control'))
+        ->toContain('no-store')
+        ->toContain('no-cache');
+
+    expect(Storage::disk('local')->get($path))->toBe('%PDF-1.4 refreshed Broj računa contract');
+    Storage::disk('local')->assertExists($path.'.meta.json');
 });
 
 test('contract share reuses unexpired stored copy and extends expiration', function (): void {

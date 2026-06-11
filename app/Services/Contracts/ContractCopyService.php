@@ -10,6 +10,8 @@ use RuntimeException;
 
 class ContractCopyService
 {
+    private const PUBLIC_COPY_REVISION = 'account-number-label-v2';
+
     public function __construct(
         private readonly ContractGenerationService $generationService,
     ) {}
@@ -26,25 +28,10 @@ class ContractCopyService
 
         $expiresAt = Carbon::now()->addDays($this->publicAccessDays());
         $path = $this->stablePath($reservation);
-        $disk = Storage::disk('local');
-        $hasReusableCopy = $reservation->contract_expires_at !== null
-            && ! Carbon::now()->greaterThan($reservation->contract_expires_at)
-            && $reservation->contract_pdf_path === $path
-            && $disk->exists($path);
+        $hasReusableCopy = $this->hasReusableCopy($reservation, $path);
 
         if (! $hasReusableCopy) {
-            $document = $this->generationService->generate($reservation, $template);
-            if (! $document->hasPdfContent()) {
-                throw new RuntimeException('Contract PDF content could not be generated.');
-            }
-
-            if ($reservation->contract_pdf_path && $reservation->contract_pdf_path !== $path) {
-                $disk->delete($reservation->contract_pdf_path);
-            }
-
-            if (! $disk->put($path, (string) $document->pdfContent)) {
-                throw new RuntimeException('Contract PDF could not be stored.');
-            }
+            $this->storeCurrentCopy($reservation, $template, $path);
         }
 
         try {
@@ -54,7 +41,7 @@ class ContractCopyService
             ])->save();
         } catch (\Throwable $exception) {
             if (! $hasReusableCopy) {
-                $disk->delete($path);
+                $this->deleteCopy($path);
             }
 
             throw $exception;
@@ -68,6 +55,19 @@ class ContractCopyService
     }
 
     /**
+     * Refresh a still-valid public copy when its render revision is stale.
+     */
+    public function refreshStaleCopy(Reservation $reservation, ContractTemplate $template): void
+    {
+        $path = $reservation->contract_pdf_path;
+        if (! $path || $this->hasCurrentCopyMetadata($path)) {
+            return;
+        }
+
+        $this->storeCurrentCopy($reservation, $template, $path);
+    }
+
+    /**
      * Remove expired public contract copies without deleting reservations.
      */
     public function cleanupExpired(): int
@@ -77,11 +77,8 @@ class ContractCopyService
             ->where('contract_expires_at', '<=', Carbon::now())
             ->get(['id', 'contract_pdf_path', 'contract_expires_at']);
 
-        $disk = Storage::disk('local');
         foreach ($expiredReservations as $reservation) {
-            if ($reservation->contract_pdf_path) {
-                $disk->delete($reservation->contract_pdf_path);
-            }
+            $this->deleteCopy($reservation->contract_pdf_path);
 
             $reservation->forceFill([
                 'contract_pdf_path' => null,
@@ -97,9 +94,7 @@ class ContractCopyService
      */
     public function invalidate(Reservation $reservation): void
     {
-        if ($reservation->contract_pdf_path) {
-            Storage::disk('local')->delete($reservation->contract_pdf_path);
-        }
+        $this->deleteCopy($reservation->contract_pdf_path);
 
         $reservation->forceFill([
             'contract_pdf_path' => null,
@@ -140,6 +135,77 @@ class ContractCopyService
     private function publicAccessDays(): int
     {
         return max(1, (int) config('contracts.public_access_days', 30));
+    }
+
+    private function hasReusableCopy(Reservation $reservation, string $path): bool
+    {
+        return $reservation->contract_expires_at !== null
+            && ! Carbon::now()->greaterThan($reservation->contract_expires_at)
+            && $reservation->contract_pdf_path === $path
+            && Storage::disk('local')->exists($path)
+            && $this->hasCurrentCopyMetadata($path);
+    }
+
+    private function storeCurrentCopy(Reservation $reservation, ContractTemplate $template, string $path): void
+    {
+        $document = $this->generationService->generate($reservation, $template);
+        if (! $document->hasPdfContent()) {
+            throw new RuntimeException('Contract PDF content could not be generated.');
+        }
+
+        if ($reservation->contract_pdf_path && $reservation->contract_pdf_path !== $path) {
+            $this->deleteCopy($reservation->contract_pdf_path);
+        }
+
+        $disk = Storage::disk('local');
+        if (! $disk->put($path, (string) $document->pdfContent)) {
+            throw new RuntimeException('Contract PDF could not be stored.');
+        }
+
+        $this->writeCopyMetadata($path);
+    }
+
+    private function hasCurrentCopyMetadata(string $path): bool
+    {
+        $disk = Storage::disk('local');
+        $metadataPath = $this->metadataPath($path);
+        if (! $disk->exists($metadataPath)) {
+            return false;
+        }
+
+        $metadata = json_decode((string) $disk->get($metadataPath), true);
+
+        return is_array($metadata)
+            && ($metadata['revision'] ?? null) === self::PUBLIC_COPY_REVISION;
+    }
+
+    private function writeCopyMetadata(string $path): void
+    {
+        $metadata = json_encode([
+            'revision' => self::PUBLIC_COPY_REVISION,
+            'generated_at' => Carbon::now()->toIso8601String(),
+        ], JSON_THROW_ON_ERROR);
+
+        if (! Storage::disk('local')->put($this->metadataPath($path), $metadata)) {
+            throw new RuntimeException('Contract PDF metadata could not be stored.');
+        }
+    }
+
+    private function deleteCopy(?string $path): void
+    {
+        if (! $path) {
+            return;
+        }
+
+        Storage::disk('local')->delete([
+            $path,
+            $this->metadataPath($path),
+        ]);
+    }
+
+    private function metadataPath(string $path): string
+    {
+        return $path.'.meta.json';
     }
 
     private function ensureAccessSignatureHash(Reservation $reservation): void

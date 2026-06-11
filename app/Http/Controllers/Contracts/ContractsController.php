@@ -226,6 +226,12 @@ class ContractsController extends Controller
         }
 
         try {
+            $template = $this->resolveTemplate($rezervacija);
+            if ($template) {
+                $contractCopyService->refreshStaleCopy($rezervacija, $template);
+                $rezervacija->refresh();
+            }
+
             $path = $rezervacija->contract_pdf_path;
             if (! $path) {
                 abort(404);
@@ -367,6 +373,8 @@ class ContractsController extends Controller
                 $filename
             ),
             'Content-Length' => (string) strlen($pdfContent),
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
         ]);
     }
 
